@@ -5,7 +5,7 @@ Goal
 ----
 Build a DEBUG APK for direct installation on a physical Android phone.
 The build command points the app to:
-https://143-api.onrender.com/api/v1
+https://143-backend-staging.vercel.app/api/index.php/api/v1
 
 Why debug APK?
 --------------
@@ -31,7 +31,7 @@ The script will:
 - run flutter pub get;
 - run flutter analyze;
 - run flutter test;
-- build the debug APK with API_BASE_URL=https://143-api.onrender.com/api/v1;
+- build the debug APK with API_BASE_URL=https://143-backend-staging.vercel.app/api/index.php/api/v1;
 - copy the final APK to this folder as:
   143_M31_PHONE_TEST_DEBUG.apk
 

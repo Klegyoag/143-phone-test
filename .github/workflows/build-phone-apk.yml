@@ -71,7 +71,7 @@ jobs:
         run: flutter test
 
       - name: Build installable debug APK
-        run: flutter build apk --debug --dart-define=API_BASE_URL=https://143-api.onrender.com/api/v1
+        run: flutter build apk --debug --dart-define=API_BASE_URL=https://143-backend-staging.vercel.app/api/index.php/api/v1
 
       - name: Finalize artifact and checksum
         shell: bash

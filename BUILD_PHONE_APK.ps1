@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
-$ApiBaseUrl = "https://143-api.onrender.com/api/v1"
+$ApiBaseUrl = "https://143-backend-staging.vercel.app/api/index.php/api/v1"
 $OutputApk = Join-Path $ProjectRoot "143_M31_PHONE_TEST_DEBUG.apk"
 
 Write-Host "=== 143 M31 Phone Test APK Builder ===" -ForegroundColor Cyan

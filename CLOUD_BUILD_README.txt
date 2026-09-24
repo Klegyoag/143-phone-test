@@ -11,7 +11,7 @@ The workflow performs the complete phone-test build gate:
 4. flutter pub get
 5. flutter analyze
 6. flutter test
-7. flutter build apk --debug --dart-define=API_BASE_URL=https://143-api.onrender.com/api/v1
+7. flutter build apk --debug --dart-define=API_BASE_URL=https://143-backend-staging.vercel.app/api/index.php/api/v1
 8. APK rename to 143_M31_PHONE_TEST_DEBUG.apk
 9. SHA-256 generation
 10. APK artifact upload
@@ -21,4 +21,4 @@ The generated APK is a DEBUG build intended for direct Android phone testing, no
 App identity: com.x10think.onefourthree
 Version: 0.31.0+31
 Minimum Android SDK: 23
-Backend base URL: https://143-api.onrender.com/api/v1
+Backend base URL: https://143-backend-staging.vercel.app/api/index.php/api/v1
