@@ -5,21 +5,39 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_vertical"
-    android:padding="16dp"
-    android:background="#FFF4F2">
-    <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="143 · Our little world" android:textStyle="bold" android:textSize="16sp" android:textColor="#6B334A"/>
-    <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Partner status" android:textSize="14sp" android:textColor="#3C2830"/>
-    <TextView android:id="@+id/widget_detail" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Private by default ♡" android:textSize="12sp" android:textColor="#7D6A71"/>
+    android:padding="14dp"
+    android:background="@drawable/widget_background">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/widget_logo"
+            android:contentDescription="143" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="143 · Our little world" android:textStyle="bold" android:textSize="15sp" android:textColor="#551D35"/>
+            <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Partner status" android:textSize="13sp" android:textColor="#422537"/>
+        </LinearLayout>
+    </LinearLayout>
+    <TextView android:id="@+id/widget_detail" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Private by default ♡" android:textSize="11sp" android:textColor="#7A5B69"/>
     <TextView
         android:id="@+id/widget_ping"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="7dp"
-        android:background="#F7D7DF"
-        android:text="♡ Quick Ping"
+        android:layout_marginTop="9dp"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:background="@drawable/widget_button"
+        android:text="♥  Send a little love"
         android:textStyle="bold"
         android:textSize="12sp"
-        android:textColor="#8B3E5A" />
+        android:textColor="#FFFFFF" />
 </LinearLayout>

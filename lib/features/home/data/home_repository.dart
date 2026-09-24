@@ -1,5 +1,6 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/cache/local_cache.dart';
+import 'package:uuid/uuid.dart';
 
 class HomeBundle {
   const HomeBundle({
@@ -7,6 +8,7 @@ class HomeBundle {
     required this.daily,
     required this.relationship,
     required this.moods,
+    this.invite,
     this.isFromCache = false,
   });
 
@@ -14,6 +16,7 @@ class HomeBundle {
   final Map<String, dynamic> daily;
   final Map<String, dynamic> relationship;
   final List<dynamic> moods;
+  final Map<String, dynamic>? invite;
   final bool isFromCache;
 
   Map<String, dynamic> toJson() => {
@@ -21,13 +24,18 @@ class HomeBundle {
         'daily': daily,
         'relationship': relationship,
         'moods': moods,
+        'invite': invite,
       };
 
-  factory HomeBundle.fromJson(Map<String, dynamic> json, {bool fromCache = false}) => HomeBundle(
+  factory HomeBundle.fromJson(Map<String, dynamic> json,
+          {bool fromCache = false}) =>
+      HomeBundle(
         home: (json['home'] as Map?)?.cast<String, dynamic>() ?? {},
         daily: (json['daily'] as Map?)?.cast<String, dynamic>() ?? {},
-        relationship: (json['relationship'] as Map?)?.cast<String, dynamic>() ?? {},
+        relationship:
+            (json['relationship'] as Map?)?.cast<String, dynamic>() ?? {},
         moods: json['moods'] is List ? json['moods'] as List : const [],
+        invite: (json['invite'] as Map?)?.cast<String, dynamic>(),
         isFromCache: fromCache,
       );
 }
@@ -36,7 +44,9 @@ class HomeRepository {
   HomeRepository(this._api, this._cache);
   final ApiClient _api;
   final LocalCache _cache;
+  final _uuid = const Uuid();
   static const _cacheKey = 'home_bundle';
+  static const _inviteCacheKey = 'pending_partner_invite';
 
   dynamic _data(Map<String, dynamic> json) => json['data'];
 
@@ -51,24 +61,61 @@ class HomeRepository {
       final bundle = HomeBundle(
         home: (_data(results[0]) as Map?)?.cast<String, dynamic>() ?? {},
         daily: (_data(results[1]) as Map?)?.cast<String, dynamic>() ?? {},
-        relationship: (_data(results[2]) as Map?)?.cast<String, dynamic>() ?? {},
+        relationship:
+            (_data(results[2]) as Map?)?.cast<String, dynamic>() ?? {},
         moods: _data(results[3]) is List ? _data(results[3]) as List : const [],
+        invite: await _inviteWhenPartnerMissing(
+          (_data(results[0]) as Map?)?.cast<String, dynamic>() ?? {},
+        ),
       );
       await _cache.putJson(_cacheKey, bundle.toJson());
       return bundle;
     } catch (_) {
-      final cached = await _cache.getJson<dynamic>(_cacheKey, maxAge: const Duration(days: 2));
-      if (cached is Map) return HomeBundle.fromJson(cached.cast<String, dynamic>(), fromCache: true);
+      final cached = await _cache.getJson<dynamic>(_cacheKey,
+          maxAge: const Duration(days: 2));
+      if (cached is Map) {
+        return HomeBundle.fromJson(cached.cast<String, dynamic>(),
+            fromCache: true);
+      }
       rethrow;
     }
   }
 
-  Future<void> setMood(String mood) => _api.post('/moods', data: {'mood': mood, 'visibility': 'partner'});
+  Future<Map<String, dynamic>?> _inviteWhenPartnerMissing(
+      Map<String, dynamic> home) async {
+    final partner = home['partner'];
+    if (partner is Map && partner.isNotEmpty) return null;
+    final cached = await _cache.getJson<dynamic>(
+      _inviteCacheKey,
+      maxAge: const Duration(hours: 24),
+    );
+    if (cached is Map) return cached.cast<String, dynamic>();
+    try {
+      final response = await _api.post(
+        '/couple-spaces/current/invites',
+        headers: {'Idempotency-Key': _uuid.v4()},
+      );
+      final invite = (_data(response) as Map?)?.cast<String, dynamic>();
+      if (invite != null) await _cache.putJson(_inviteCacheKey, invite);
+      return invite;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  Future<void> sendPing({String kind = 'hug'}) => _api.post('/pings', data: {'kind': kind});
+  Future<void> setMood(String mood) =>
+      _api.post('/moods', data: {'mood': mood, 'visibility': 'partner'});
 
-  Future<Map<String, dynamic>> answerDaily(String questionId, String answer) async {
-    final response = await _api.post('/daily/questions/$questionId/answers', data: {'answer': answer});
+  Future<void> sendPing({String kind = 'hug'}) =>
+      _api.post('/pings', data: {'kind': kind});
+
+  Future<void> sendWidgetPing({String kind = 'hug'}) =>
+      _api.post('/widgets/ping', data: {'kind': kind});
+
+  Future<Map<String, dynamic>> answerDaily(
+      String questionId, String answer) async {
+    final response = await _api
+        .post('/daily/questions/$questionId/answers', data: {'answer': answer});
     return (response['data'] as Map?)?.cast<String, dynamic>() ?? {};
   }
 

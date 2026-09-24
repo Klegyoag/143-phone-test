@@ -10,23 +10,35 @@ abstract final class AppTheme {
 
   static ThemeData _build(Brightness brightness, {required bool highContrast}) {
     final dark = brightness == Brightness.dark;
-    final background = dark ? const Color(0xFF151321) : AppColors.ivory;
-    final surface = dark ? const Color(0xFF221D2C) : AppColors.paper;
-    final ink = dark ? const Color(0xFFFFF4F6) : AppColors.ink;
-    final muted = dark ? const Color(0xFFD0CADB) : AppColors.muted;
+    final background = dark ? AppColors.darkBackground : AppColors.ivory;
+    final surface = dark ? AppColors.darkSurface : AppColors.paper;
+    final ink = dark ? AppColors.darkInk : AppColors.ink;
+    final muted = dark ? AppColors.darkMuted : AppColors.muted;
     final divider = highContrast
         ? (dark ? Colors.white54 : AppColors.wine)
-        : (dark ? const Color(0xFF41384C) : AppColors.divider);
+        : (dark ? AppColors.darkBorder : AppColors.divider);
     final base = ThemeData(
       useMaterial3: true,
       brightness: brightness,
       scaffoldBackgroundColor: background,
-      colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.rose,
-          brightness: brightness,
-          primary: AppColors.rose,
-          secondary: AppColors.wine,
-          surface: surface),
+      colorScheme: dark
+          ? const ColorScheme.dark(
+              primary: Color(0xFFFF6F91),
+              onPrimary: Colors.white,
+              secondary: Color(0xFFFFB5C5),
+              onSecondary: Color(0xFF351322),
+              surface: AppColors.darkSurface,
+              onSurface: AppColors.darkInk,
+              onSurfaceVariant: AppColors.darkMuted,
+              outline: AppColors.darkBorder,
+              error: Color(0xFFFF8A98),
+            )
+          : ColorScheme.fromSeed(
+              seedColor: AppColors.rose,
+              brightness: brightness,
+              primary: AppColors.rose,
+              secondary: AppColors.wine,
+              surface: surface),
     );
     return base.copyWith(
       textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).copyWith(
@@ -48,7 +60,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: dark
-              ? const Color(0xFF2D2738)
+              ? AppColors.darkSurfaceHigh
               : Colors.white.withValues(alpha: .78),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(17),
@@ -92,11 +104,19 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
           height: 76,
           backgroundColor: dark
-              ? const Color(0xFF201A29)
+              ? const Color(0xFF191421)
               : Colors.white.withValues(alpha: .96),
-          indicatorColor: dark ? const Color(0xFF43344C) : AppColors.sky,
+          indicatorColor: dark ? const Color(0xFF49283B) : AppColors.sky,
           labelTextStyle: WidgetStateProperty.all(
               GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700))),
+      dialogTheme: DialogThemeData(backgroundColor: surface),
+      bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: dark ? AppColors.darkSurfaceHigh : AppColors.ink,
+        contentTextStyle:
+            TextStyle(color: dark ? AppColors.darkInk : Colors.white),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }

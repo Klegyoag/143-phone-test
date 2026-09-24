@@ -6,26 +6,36 @@ class JournalCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(18),
-    this.color = AppColors.paper,
+    this.color,
     this.onTap,
   });
 
   final Widget child;
   final EdgeInsets padding;
-  final Color color;
+  final Color? color;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final resolvedColor = dark
+        ? switch (color) {
+            AppColors.blush => AppColors.darkBlush,
+            AppColors.blushStrong => AppColors.darkBlush,
+            AppColors.peach => AppColors.darkPeach,
+            _ => AppColors.darkSurface,
+          }
+        : (color ?? AppColors.paper);
+    final border = dark ? AppColors.darkBorder : AppColors.divider;
     final card = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color,
+        color: resolvedColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.divider.withValues(alpha: .75)),
+        border: Border.all(color: border.withValues(alpha: .8)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.wine.withValues(alpha: .045),
+            color: Colors.black.withValues(alpha: dark ? .24 : .045),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -34,6 +44,7 @@ class JournalCard extends StatelessWidget {
       child: child,
     );
     if (onTap == null) return card;
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(24), child: card);
+    return InkWell(
+        onTap: onTap, borderRadius: BorderRadius.circular(24), child: card);
   }
 }

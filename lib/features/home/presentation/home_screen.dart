@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,13 +20,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late Future<HomeBundle> future;
+  HomeBundle? bundle;
+  bool loading = true;
   StreamSubscription? realtimeSub;
+  Timer? fallbackRefresh;
 
   @override
   void initState() {
     super.initState();
-    future = ref.read(homeRepositoryProvider).load();
+    reload();
     realtimeSub = ref.read(realtimeCoordinatorProvider).events.listen((event) {
       const refreshEvents = {
         'presence.updated',
@@ -41,18 +45,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'scheduled_message.delivered',
         'surprise.unlocked',
       };
-      if (refreshEvents.contains(event.name) && mounted) reload();
+      if (refreshEvents.contains(event.name) && mounted) reload(silent: true);
     });
+    fallbackRefresh = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => reload(silent: true),
+    );
   }
 
   @override
   void dispose() {
     realtimeSub?.cancel();
+    fallbackRefresh?.cancel();
     super.dispose();
   }
 
-  Future<void> reload() async {
-    setState(() => future = ref.read(homeRepositoryProvider).load());
+  Future<void> reload({bool silent = false}) async {
+    if (!silent && bundle == null && mounted) setState(() => loading = true);
+    try {
+      final next = await ref.read(homeRepositoryProvider).load();
+      if (!mounted) return;
+      setState(() {
+        bundle = next;
+        loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Future<void> _answerDaily(Map<String, dynamic> daily) async {
@@ -103,177 +125,289 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final current = bundle;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: reload,
-          child: FutureBuilder<HomeBundle>(
-            future: future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return ListView(children: const [
-                  SizedBox(height: 300),
-                  Center(child: CircularProgressIndicator())
-                ]);
-              }
-              if (snapshot.hasError) {
-                return ListView(
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    const SizedBox(height: 80),
-                    const JournalCard(
-                      child: Column(children: [
-                        Icon(Icons.cloud_off_rounded,
-                            color: AppColors.rose, size: 40),
-                        SizedBox(height: 12),
-                        Text('Couldn’t load your little world.'),
-                      ]),
-                    ),
-                    TextButton(
-                        onPressed: reload, child: const Text('Try again')),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: dark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF100D18),
+                    Color(0xFF1A1220),
+                    Color(0xFF101723)
                   ],
-                );
-              }
-
-              final bundle = snapshot.data!;
-              final home = bundle.home;
-              final partner =
-                  (home['partner'] as Map?)?.cast<String, dynamic>();
-              final name =
-                  '${partner?['display_name'] ?? partner?['username'] ?? 'My Love'}';
-              final memories = home['recent_memories'] is List
-                  ? home['recent_memories'] as List
-                  : const [];
-              final relationshipSettings =
-                  (bundle.relationship['settings'] is Map
-                      ? bundle.relationship['settings']
-                      : bundle.relationship) as Map?;
-              final anniversary =
-                  '${bundle.relationship['anniversary_date'] ?? relationshipSettings?['anniversary_date'] ?? ''}';
-              final unread =
-                  int.tryParse('${home['unread_notifications'] ?? 0}') ?? 0;
-
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-                children: [
-                  if (bundle.isFromCache) ...[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                          color: AppColors.blush,
-                          borderRadius: BorderRadius.circular(16)),
-                      child: const Row(children: [
-                        Icon(Icons.cloud_off_rounded,
-                            size: 18, color: AppColors.rose),
-                        SizedBox(width: 8),
-                        Expanded(
-                            child: Text(
-                                'Showing your last saved view while offline. Pull to refresh when you reconnect.',
-                                style: TextStyle(fontSize: 12)))
-                      ]),
-                    ),
-                  ],
-                  _Header(
-                    name: name,
-                    unread: unread,
-                    onSearch: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const DiscoveryScreen()),
-                    ),
-                    onNotifications: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const NotificationsScreen()),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _MoodPicker(
-                    onMood: (mood) async {
-                      await ref.read(homeRepositoryProvider).setMood(mood);
-                      reload();
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  const _SectionTitle('♡  TODAY FOR US'),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                          child: _DailyCard(
-                              data: bundle.daily,
-                              onAnswer: () => _answerDaily(bundle.daily))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _PartnerMoodCard(
-                          moods: bundle.moods,
-                          partnerName: name,
-                          onPing: () async {
-                            await ref.read(homeRepositoryProvider).sendPing();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('A little hug was sent ♡')));
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _SpecialDayCard(anniversary: anniversary),
-                  const SizedBox(height: 26),
-                  Row(
-                    children: [
-                      const Expanded(
-                          child: _SectionTitle('♡  MEMORIES FOR YOU')),
-                      Text('${memories.length} recent',
-                          style: const TextStyle(color: AppColors.rose)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 145,
-                    child: memories.isEmpty
-                        ? const JournalCard(
-                            child: Center(
-                                child: Text(
-                                    'Your shared moments will appear here.')))
-                        : ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: memories
-                                .whereType<Map>()
-                                .map((e) =>
-                                    _MemoryPreview(e.cast<String, dynamic>()))
-                                .toList(),
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  const JournalCard(
-                    color: AppColors.blush,
-                    child: Row(children: [
-                      Icon(Icons.format_quote_rounded, color: AppColors.rose),
-                      SizedBox(width: 12),
-                      Expanded(
-                          child: Text(
-                              'Every little moment with you is worth keeping.',
-                              style: TextStyle(fontWeight: FontWeight.w600))),
-                      Icon(Icons.favorite_border_rounded,
-                          color: AppColors.rose),
-                    ]),
-                  ),
-                ],
-              );
-            },
+                )
+              : null,
+        ),
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () => reload(),
+            color: AppColors.rose,
+            child: current == null
+                ? (loading
+                    ? const _HomeSkeleton()
+                    : _HomeLoadFailure(onRetry: () => reload()))
+                : _homeContent(current),
           ),
         ),
       ),
     );
   }
+
+  Widget _homeContent(HomeBundle data) {
+    final home = data.home;
+    final partner = (home['partner'] as Map?)?.cast<String, dynamic>();
+    final name =
+        '${partner?['display_name'] ?? partner?['username'] ?? 'My Love'}';
+    final memories = home['recent_memories'] is List
+        ? home['recent_memories'] as List
+        : const [];
+    final relationshipSettings = (data.relationship['settings'] is Map
+        ? data.relationship['settings']
+        : data.relationship) as Map?;
+    final anniversary =
+        '${data.relationship['anniversary_date'] ?? relationshipSettings?['anniversary_date'] ?? ''}';
+    final unread = int.tryParse('${home['unread_notifications'] ?? 0}') ?? 0;
+
+    return ListView(
+      key: const PageStorageKey('home-scroll'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+      children: [
+        _Header(
+          name: name,
+          unread: unread,
+          onSearch: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DiscoveryScreen()),
+          ),
+          onNotifications: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          ),
+        ),
+        if (partner == null || partner.isEmpty) ...[
+          const SizedBox(height: 16),
+          _PartnerInviteCard(
+            invite: data.invite,
+            onConnect: () => context.go('/couple-setup'),
+          ),
+        ],
+        const SizedBox(height: 18),
+        _MoodPicker(
+          onMood: (mood) async {
+            await ref.read(homeRepositoryProvider).setMood(mood);
+            reload();
+          },
+        ),
+        const SizedBox(height: 22),
+        const _SectionTitle('♡  TODAY FOR US'),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+                child: _DailyCard(
+                    data: data.daily,
+                    onAnswer: () => _answerDaily(data.daily))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _PartnerMoodCard(
+                moods: data.moods,
+                partnerName: name,
+                onPing: () async {
+                  await ref.read(homeRepositoryProvider).sendPing();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('A little hug was sent ♡')));
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _SpecialDayCard(anniversary: anniversary),
+        const SizedBox(height: 26),
+        Row(
+          children: [
+            const Expanded(child: _SectionTitle('♡  MEMORIES FOR YOU')),
+            Text('${memories.length} recent',
+                style: const TextStyle(color: AppColors.rose)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 145,
+          child: memories.isEmpty
+              ? const JournalCard(
+                  child: Center(
+                      child: Text('Your shared moments will appear here.')))
+              : ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: memories
+                      .whereType<Map>()
+                      .map((e) => _MemoryPreview(e.cast<String, dynamic>()))
+                      .toList(),
+                ),
+        ),
+        const SizedBox(height: 20),
+        const JournalCard(
+          color: AppColors.blush,
+          child: Row(children: [
+            Icon(Icons.format_quote_rounded, color: AppColors.rose),
+            SizedBox(width: 12),
+            Expanded(
+                child: Text('Every little moment with you is worth keeping.',
+                    style: TextStyle(fontWeight: FontWeight.w600))),
+            Icon(Icons.favorite_border_rounded, color: AppColors.rose),
+          ]),
+        ),
+      ],
+    );
+  }
+}
+
+class _PartnerInviteCard extends StatelessWidget {
+  const _PartnerInviteCard({required this.invite, required this.onConnect});
+  final Map<String, dynamic>? invite;
+  final VoidCallback onConnect;
+
+  @override
+  Widget build(BuildContext context) {
+    final code = '${invite?['join_code'] ?? ''}'.trim();
+    return JournalCard(
+      color: AppColors.blush,
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 26,
+            backgroundColor: AppColors.rose,
+            child: Icon(Icons.favorite_rounded, color: Colors.white),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Connect your person',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text(code.isEmpty
+                    ? 'Create or join your private space'
+                    : 'Invite code  $code'),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: code.isEmpty ? 'Connect partner' : 'Copy invite code',
+            onPressed: code.isEmpty
+                ? onConnect
+                : () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invite code copied')),
+                      );
+                    }
+                  },
+            icon: Icon(code.isEmpty
+                ? Icons.arrow_forward_rounded
+                : Icons.copy_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeLoadFailure extends StatelessWidget {
+  const _HomeLoadFailure({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 120),
+          Image.asset('assets/images/143_logo_transparent.png', height: 110),
+          const SizedBox(height: 18),
+          Text('Your little world will be back in a moment.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 14),
+          Center(
+              child: FilledButton(
+                  onPressed: onRetry, child: const Text('Open again'))),
+        ],
+      );
+}
+
+class _HomeSkeleton extends StatefulWidget {
+  const _HomeSkeleton();
+  @override
+  State<_HomeSkeleton> createState() => _HomeSkeletonState();
+}
+
+class _HomeSkeletonState extends State<_HomeSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 950),
+    lowerBound: .42,
+    upperBound: .82,
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+        children: [
+          FadeTransition(
+              opacity: pulse, child: const _SkeletonBox(height: 116)),
+          const SizedBox(height: 18),
+          FadeTransition(
+              opacity: pulse, child: const _SkeletonBox(height: 150)),
+          const SizedBox(height: 22),
+          Row(children: [
+            Expanded(
+                child: FadeTransition(
+                    opacity: pulse, child: const _SkeletonBox(height: 210))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: FadeTransition(
+                    opacity: pulse, child: const _SkeletonBox(height: 210))),
+          ]),
+          const SizedBox(height: 16),
+          FadeTransition(
+              opacity: pulse, child: const _SkeletonBox(height: 118)),
+        ],
+      );
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({required this.height});
+  final double height;
+  @override
+  Widget build(BuildContext context) => Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.darkSurfaceHigh
+              : AppColors.blushStrong,
+          borderRadius: BorderRadius.circular(26),
+        ),
+      );
 }
 
 class _Header extends StatelessWidget {
@@ -298,26 +432,28 @@ class _Header extends StatelessWidget {
             Text('Good morning,\n$name ♡',
                 style: Theme.of(context).textTheme.displaySmall),
             const SizedBox(height: 8),
-            const Text('Your private little world, together.',
-                style: TextStyle(color: AppColors.muted)),
+            Text('Your private little world, together.',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
         ),
         Row(children: [
           IconButton.filledTonal(
             tooltip: 'Search, favorites & activity',
             onPressed: onSearch,
-            icon: const Icon(Icons.search_rounded, color: AppColors.wine),
+            icon: Icon(Icons.search_rounded,
+                color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onNotifications,
             child: Stack(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                     radius: 23,
-                    backgroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     child: Icon(Icons.notifications_none_rounded,
-                        color: AppColors.wine)),
+                        color: Theme.of(context).colorScheme.onSurface)),
                 if (unread > 0)
                   Positioned(
                     right: 0,
@@ -370,8 +506,11 @@ class _MoodPicker extends StatelessWidget {
                               style: const TextStyle(fontSize: 22))),
                       const SizedBox(height: 5),
                       Text(mood.$2,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.muted)),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
                     ]),
                   ))
               .toList(),
@@ -386,10 +525,10 @@ class _SectionTitle extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Text(text,
-      style: const TextStyle(
+      style: TextStyle(
           fontWeight: FontWeight.w800,
           letterSpacing: .4,
-          color: AppColors.wine));
+          color: Theme.of(context).colorScheme.secondary));
 }
 
 class _DailyCard extends StatelessWidget {
@@ -401,9 +540,10 @@ class _DailyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String text = 'What small thing made you think of me today?';
     final question = data['question'];
-    if (question is Map)
+    if (question is Map) {
       text =
           '${question['body'] ?? question['question'] ?? question['text'] ?? question['title'] ?? text}';
+    }
     final answered = data['my_answer'] != null;
     return JournalCard(
       color: AppColors.blush,
@@ -440,15 +580,17 @@ class _PartnerMoodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String mood = 'Thinking of you';
-    if (moods.isNotEmpty && moods.first is Map)
+    if (moods.isNotEmpty && moods.first is Map) {
       mood = '${(moods.first as Map)['type'] ?? mood}';
+    }
     return JournalCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Partner Mood',
             style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
         Text('$partnerName is feeling',
-            style: const TextStyle(color: AppColors.muted)),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         Text('$mood ♡',
             style: Theme.of(context)
@@ -469,10 +611,11 @@ class _SpecialDayCard extends StatelessWidget {
   Widget build(BuildContext context) => JournalCard(
         color: AppColors.blush,
         child: Row(children: [
-          const CircleAvatar(
+          CircleAvatar(
               radius: 27,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.calendar_month_rounded, color: AppColors.rose)),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              child: const Icon(Icons.calendar_month_rounded,
+                  color: AppColors.rose)),
           const SizedBox(width: 14),
           Expanded(
             child:
@@ -485,7 +628,8 @@ class _SpecialDayCard extends StatelessWidget {
                   anniversary.isEmpty
                       ? 'Add your anniversary date'
                       : anniversary,
-                  style: const TextStyle(color: AppColors.muted)),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ]),
           ),
           const Icon(Icons.favorite_rounded, color: AppColors.rose),
@@ -518,7 +662,9 @@ class _MemoryPreview extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700)),
           Text('${memory['type'] ?? 'memory'}',
-              style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ]),
       );
 }

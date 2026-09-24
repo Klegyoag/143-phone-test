@@ -15,4 +15,13 @@ abstract final class AppColors {
   static const sky = Color(0xFFE2F0FF);
   static const butter = Color(0xFFFFF0CF);
   static const divider = Color(0xFFE6E8F0);
+
+  static const darkBackground = Color(0xFF100D18);
+  static const darkSurface = Color(0xFF1B1625);
+  static const darkSurfaceHigh = Color(0xFF282033);
+  static const darkBlush = Color(0xFF371E2B);
+  static const darkPeach = Color(0xFF32201F);
+  static const darkBorder = Color(0xFF41354B);
+  static const darkInk = Color(0xFFFFF7FA);
+  static const darkMuted = Color(0xFFC8BDCD);
 }

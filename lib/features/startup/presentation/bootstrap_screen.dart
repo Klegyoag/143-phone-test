@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../l10n/app_localizations.dart';
 
 class BootstrapScreen extends ConsumerStatefulWidget {
   const BootstrapScreen({super.key});
@@ -18,8 +17,6 @@ class BootstrapScreen extends ConsumerStatefulWidget {
 }
 
 class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
-  String messageKey = 'openingWorld';
-
   @override
   void initState() {
     super.initState();
@@ -49,10 +46,8 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
     }
 
     try {
-      _status('restoringSession');
       await api.get('/me');
 
-      _status('checkingRecovery');
       final startupChecks = await Future.wait<dynamic>([
         ref.read(authRepositoryProvider).recoveryStatus(),
         ref.read(legalRepositoryProvider).currentState(),
@@ -65,7 +60,6 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
               recoveryData['recovery_confirmed'] == true);
       if (!recoveryConfirmed) return _go('/recovery-confirm');
 
-      _status('checkingLegal');
       final legal = startupChecks[1];
       if (legal.acceptanceRequired) return _go('/legal');
 
@@ -74,7 +68,6 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
         return _go('/invite/${Uri.encodeComponent(pendingInvite)}');
       }
 
-      _status('findingCouple');
       final couple = startupChecks[2] as Map<String, dynamic>?;
       if (couple == null || couple.isEmpty) return _go('/couple-setup');
 
@@ -101,11 +94,11 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
           .getJson<String>('last_safe_route', maxAge: const Duration(days: 7));
       if (cached == '/app' &&
           (access?.isNotEmpty == true || refresh?.isNotEmpty == true)) {
-        return _go('/offline-startup');
+        return _go('/app?offline=1');
       }
-      _status('startupError');
+      _retrySilently();
     } catch (_) {
-      _status('startupError');
+      _retrySilently();
     }
   }
 
@@ -137,8 +130,10 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
     }
   }
 
-  void _status(String value) {
-    if (mounted) setState(() => messageKey = value);
+  void _retrySilently() {
+    Future<void>.delayed(const Duration(seconds: 3), () {
+      if (mounted) _bootstrap();
+    });
   }
 
   void _go(String location) {
@@ -147,46 +142,48 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: .86, end: 1),
-                    duration: const Duration(milliseconds: 700),
-                    curve: Curves.easeOutBack,
-                    builder: (_, scale, child) =>
-                        Transform.scale(scale: scale, child: child),
-                    child: Container(
-                      width: 116,
-                      height: 116,
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: AppColors.blush),
-                      alignment: Alignment.center,
-                      child: const Text('143',
-                          style: TextStyle(
-                              fontSize: 38,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.rose)),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(.05, -.2),
+              radius: 1.15,
+              colors: [
+                Color(0xFFFFFBF8),
+                Color(0xFFFFE6EC),
+                Color(0xFFF8B9C9),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: .92, end: 1),
+                duration: const Duration(milliseconds: 650),
+                curve: Curves.easeOutCubic,
+                builder: (_, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/143_logo_transparent.png',
+                      width: 224,
+                      height: 224,
+                      fit: BoxFit.contain,
+                      semanticLabel: '143',
                     ),
-                  ),
-                  const SizedBox(height: 28),
-                  Text(context.l10n.t(messageKey),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge),
-                  const SizedBox(height: 20),
-                  const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(strokeWidth: 2.5)),
-                  const SizedBox(height: 20),
-                  TextButton(
-                      onPressed: _bootstrap,
-                      child: Text(context.l10n.t('retryStartup'))),
-                ],
+                    const SizedBox(height: 34),
+                    SizedBox(
+                      width: 74,
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        borderRadius: BorderRadius.circular(8),
+                        backgroundColor: Colors.white.withValues(alpha: .5),
+                        color: AppColors.rose,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

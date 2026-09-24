@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../api/api_client.dart';
@@ -48,8 +47,9 @@ class RealtimeCoordinator extends ChangeNotifier {
     } catch (_) {}
     try {
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map)
+      if (couple is Map) {
         coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      }
     } catch (_) {
       coupleSpaceId = '';
     }
@@ -58,8 +58,9 @@ class RealtimeCoordinator extends ChangeNotifier {
         if (userId.isNotEmpty) 'private-user.$userId',
         if (coupleSpaceId.isNotEmpty) 'private-couple.$coupleSpaceId',
       ]);
-      if (coupleSpaceId.isNotEmpty)
+      if (coupleSpaceId.isNotEmpty) {
         await setPresence('online', metadata: {'client': 'flutter'});
+      }
     } catch (_) {
       // API screens continue to work using HTTP/polling if realtime is unavailable.
     }
@@ -72,8 +73,9 @@ class RealtimeCoordinator extends ChangeNotifier {
     } catch (_) {}
     try {
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map)
+      if (couple is Map) {
         coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      }
     } catch (_) {
       coupleSpaceId = '';
     }
@@ -90,8 +92,9 @@ class RealtimeCoordinator extends ChangeNotifier {
       final me = (await _api.get('/me'))['data'];
       if (me is Map) userId = '${me['id'] ?? ''}';
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map)
+      if (couple is Map) {
         coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      }
       await _client.updateChannels([
         if (userId.isNotEmpty) 'private-user.$userId',
         if (coupleSpaceId.isNotEmpty) 'private-couple.$coupleSpaceId',
@@ -111,7 +114,11 @@ class RealtimeCoordinator extends ChangeNotifier {
     switch (lifecycle) {
       case AppLifecycleState.resumed:
         await setPresence('online');
-        if (!_started) await start();
+        if (!_started) {
+          await start();
+        } else if (!connected) {
+          await reconnect();
+        }
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
