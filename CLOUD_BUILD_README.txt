@@ -19,6 +19,6 @@ The workflow performs the complete phone-test build gate:
 The generated APK is a DEBUG build intended for direct Android phone testing, not Play Store publishing.
 
 App identity: com.x10think.onefourthree
-Version: 0.31.0+31
+Version: 0.32.0+32
 Minimum Android SDK: 23
 Backend base URL: https://143-backend-staging.vercel.app/api/index.php/api/v1
