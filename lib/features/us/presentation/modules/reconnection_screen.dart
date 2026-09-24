@@ -3,19 +3,306 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class CoolDownScreen extends ConsumerStatefulWidget{const CoolDownScreen({super.key});@override ConsumerState<CoolDownScreen> createState()=>_CoolDownScreenState();}
-class _CoolDownScreenState extends ConsumerState<CoolDownScreen>{bool loading=true;Map<String,dynamic> current={};List<String> prompts=[];@override void initState(){super.initState();_load();}
-Future<void>_load()async{setState(()=>loading=true);final r=ref.read(relationshipToolsRepositoryProvider);try{current=await r.currentCoolDown();prompts=await r.reconnectionPrompts();}catch(_){current={};}finally{if(mounted)setState(()=>loading=false);}}
-Future<void>_start(int minutes)async{await ref.read(relationshipToolsRepositoryProvider).startCoolDown({'duration_minutes':minutes,'suppress_non_urgent_pings':true});_load();}
-Future<void>_custom()async{final n=TextEditingController(text:'90');final ok=await showDialog<bool>(context:context,builder:(x)=>AlertDialog(title:const Text('Custom quiet time'),content:TextField(controller:n,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Minutes')),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Start'))]));final m=int.tryParse(n.text);if(ok==true&&m!=null&&m>0)await _start(m);}
-Future<void>_reconnect()async{final r=ref.read(relationshipToolsRepositoryProvider);final s=await r.startReconnection();if(!mounted)return;Navigator.push(context,MaterialPageRoute(builder:(_)=>ReconnectionSessionScreen(session:s,prompts:prompts)));}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Quiet & Reconnect')),body:loading?const Center(child:CircularProgressIndicator()):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.fromLTRB(20,8,20,100),children:[Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xfffff1f4),Color(0xfffff7ee)]),borderRadius:BorderRadius.circular(28)),child:const Column(children:[Icon(Icons.spa_rounded,color:AppColors.rose,size:38),SizedBox(height:8),Text('Space without disconnection',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),Text('Quiet Time softens non-urgent pings. It never blocks safety, account or security notices.',textAlign:TextAlign.center,style:TextStyle(color:AppColors.muted))])),const SizedBox(height:18),if(current.isNotEmpty)Card(child:ListTile(leading:const Icon(Icons.timer_outlined,color:AppColors.rose),title:const Text('Quiet Time is active'),subtitle:Text('${current['status']??'active'} • ${current['scheduled_at']??current['created_at']??''}'))),const Text('Choose a little space',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16)),const SizedBox(height:10),Wrap(spacing:9,runSpacing:9,children:[ActionChip(label:const Text('30 minutes'),onPressed:()=>_start(30)),ActionChip(label:const Text('1 hour'),onPressed:()=>_start(60)),ActionChip(label:const Text('Until tonight'),onPressed:()=>_start(_untilTonight())),ActionChip(label:const Text('Custom'),onPressed:_custom)]),const SizedBox(height:24),Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Icon(Icons.favorite_outline,color:AppColors.rose),const SizedBox(height:8),const Text('Ready to reconnect?',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const Text('Each of you answers privately. Answers only reveal when both have responded.',style:TextStyle(color:AppColors.muted)),const SizedBox(height:14),FilledButton.icon(onPressed:_reconnect,icon:const Icon(Icons.forum_outlined),label:const Text('Start gentle reconnection'))]))])));
-int _untilTonight(){final n=DateTime.now(),t=DateTime(n.year,n.month,n.day,22);return t.isAfter(n)?t.difference(n).inMinutes:60;}
+class CoolDownScreen extends ConsumerStatefulWidget {
+  const CoolDownScreen({super.key});
+  @override
+  ConsumerState<CoolDownScreen> createState() => _CoolDownScreenState();
 }
 
-class ReconnectionSessionScreen extends ConsumerStatefulWidget{const ReconnectionSessionScreen({super.key,required this.session,required this.prompts});final Map<String,dynamic>session;final List<String>prompts;@override ConsumerState<ReconnectionSessionScreen> createState()=>_RSS();}
-class _RSS extends ConsumerState<ReconnectionSessionScreen>{final answer=TextEditingController();bool sent=false,loading=false;dynamic reveal;String get id=>'${widget.session['id']??''}';@override void dispose(){answer.dispose();super.dispose();}
-Future<void>_submit()async{if(answer.text.trim().isEmpty)return;setState(()=>loading=true);try{await ref.read(relationshipToolsRepositoryProvider).answerReconnection(id,answer.text.trim());setState(()=>sent=true);await _reveal();}finally{if(mounted)setState(()=>loading=false);}}
-Future<void>_reveal()async{try{final x=await ref.read(relationshipToolsRepositoryProvider).revealReconnection(id);if(mounted)setState(()=>reveal=x);}catch(_){if(mounted)setState(()=>reveal=null);}}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Reconnect gently')),body:ListView(padding:const EdgeInsets.all(20),children:[...widget.prompts.take(3).map((p)=>Card(child:Padding(padding:const EdgeInsets.all(16),child:Text(p,style:const TextStyle(fontWeight:FontWeight.w700))))),const SizedBox(height:12),if(!sent)...[TextField(controller:answer,maxLines:6,decoration:const InputDecoration(labelText:'My private answer',hintText:'Say what you need your person to understand…')),const SizedBox(height:12),FilledButton(onPressed:loading?null:_submit,child:const Text('Submit privately'))]else if(reveal==null)...[const Card(child:Padding(padding:EdgeInsets.all(20),child:Column(children:[Icon(Icons.lock_clock,color:AppColors.rose),SizedBox(height:8),Text('Your answer is safe.',style:TextStyle(fontWeight:FontWeight.w900)),Text('The joint reveal stays locked until both partners answer.',textAlign:TextAlign.center)]))),TextButton(onPressed:_reveal,child:const Text('Check reveal'))]else ...[Container(padding:const EdgeInsets.all(24),decoration:BoxDecoration(color:AppColors.blush,borderRadius:BorderRadius.circular(28)),child:Column(children:[const Icon(Icons.favorite_rounded,color:AppColors.rose,size:42),const Text('Together again',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900)),const SizedBox(height:12),Text('$reveal',textAlign:TextAlign.center)]))]]));}
+class _CoolDownScreenState extends ConsumerState<CoolDownScreen> {
+  bool loading = true;
+  Map<String, dynamic> current = {};
+  List<String> prompts = [];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => loading = true);
+    final r = ref.read(relationshipToolsRepositoryProvider);
+    try {
+      current = await r.currentCoolDown();
+      prompts = await r.reconnectionPrompts();
+    } catch (_) {
+      current = {};
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _start(int minutes) async {
+    await ref.read(relationshipToolsRepositoryProvider).startCoolDown(
+        {'duration_minutes': minutes, 'suppress_non_urgent_pings': true});
+    _load();
+  }
+
+  Future<void> _custom() async {
+    final n = TextEditingController(text: '90');
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (x) => AlertDialog(
+                title: const Text('Custom quiet time'),
+                content: TextField(
+                    controller: n,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Minutes')),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(x, false),
+                      child: const Text('Cancel')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(x, true),
+                      child: const Text('Start'))
+                ]));
+    final m = int.tryParse(n.text);
+    if (ok == true && m != null && m > 0) await _start(m);
+  }
+
+  Future<void> _reconnect() async {
+    final r = ref.read(relationshipToolsRepositoryProvider);
+    final s = await r.startReconnection();
+    if (!mounted) return;
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                ReconnectionSessionScreen(session: s, prompts: prompts)));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Quiet & Reconnect')),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xfffff1f4), Color(0xfffff7ee)],
+                        ),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.spa_rounded,
+                              color: AppColors.rose, size: 38),
+                          SizedBox(height: 8),
+                          Text(
+                            'Space without disconnection',
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w900),
+                          ),
+                          Text(
+                            'Quiet Time softens non-urgent pings. It never blocks safety, account or security notices.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    if (current.isNotEmpty)
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.timer_outlined,
+                              color: AppColors.rose),
+                          title: const Text('Quiet Time is active'),
+                          subtitle: Text(
+                            '${current['status'] ?? 'active'} • ${current['scheduled_at'] ?? current['created_at'] ?? ''}',
+                          ),
+                        ),
+                      ),
+                    const Text(
+                      'Choose a little space',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 9,
+                      runSpacing: 9,
+                      children: [
+                        ActionChip(
+                            label: const Text('30 minutes'),
+                            onPressed: () => _start(30)),
+                        ActionChip(
+                            label: const Text('1 hour'),
+                            onPressed: () => _start(60)),
+                        ActionChip(
+                            label: const Text('Until tonight'),
+                            onPressed: () => _start(_untilTonight())),
+                        ActionChip(
+                            label: const Text('Custom'), onPressed: _custom),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.favorite_outline,
+                                color: AppColors.rose),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Ready to reconnect?',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w900),
+                            ),
+                            const Text(
+                              'Each of you answers privately. Answers only reveal when both have responded.',
+                              style: TextStyle(color: AppColors.muted),
+                            ),
+                            const SizedBox(height: 14),
+                            FilledButton.icon(
+                              onPressed: _reconnect,
+                              icon: const Icon(Icons.forum_outlined),
+                              label: const Text('Start gentle reconnection'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      );
+  int _untilTonight() {
+    final n = DateTime.now(), t = DateTime(n.year, n.month, n.day, 22);
+    return t.isAfter(n) ? t.difference(n).inMinutes : 60;
+  }
+}
+
+class ReconnectionSessionScreen extends ConsumerStatefulWidget {
+  const ReconnectionSessionScreen(
+      {super.key, required this.session, required this.prompts});
+  final Map<String, dynamic> session;
+  final List<String> prompts;
+  @override
+  ConsumerState<ReconnectionSessionScreen> createState() => _RSS();
+}
+
+class _RSS extends ConsumerState<ReconnectionSessionScreen> {
+  final answer = TextEditingController();
+  bool sent = false, loading = false;
+  dynamic reveal;
+  String get id => '${widget.session['id'] ?? ''}';
+
+  @override
+  void dispose() {
+    answer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (answer.text.trim().isEmpty) return;
+    setState(() => loading = true);
+    try {
+      await ref
+          .read(relationshipToolsRepositoryProvider)
+          .answerReconnection(id, answer.text.trim());
+      setState(() => sent = true);
+      await _reveal();
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _reveal() async {
+    try {
+      final value = await ref
+          .read(relationshipToolsRepositoryProvider)
+          .revealReconnection(id);
+      if (mounted) setState(() => reveal = value);
+    } catch (_) {
+      if (mounted) setState(() => reveal = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Reconnect gently')),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            ...widget.prompts.take(3).map(
+                  (prompt) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        prompt,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 12),
+            if (!sent) ...[
+              TextField(
+                controller: answer,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'My private answer',
+                  hintText: 'Say what you need your person to understand…',
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: loading ? null : _submit,
+                child: const Text('Submit privately'),
+              ),
+            ] else if (reveal == null) ...[
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Icon(Icons.lock_clock, color: AppColors.rose),
+                      SizedBox(height: 8),
+                      Text(
+                        'Your answer is safe.',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        'The joint reveal stays locked until both partners answer.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              TextButton(onPressed: _reveal, child: const Text('Check reveal')),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.blush,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.favorite_rounded,
+                        color: AppColors.rose, size: 42),
+                    const Text(
+                      'Together again',
+                      style:
+                          TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('$reveal', textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
 }

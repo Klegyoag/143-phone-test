@@ -30,7 +30,7 @@ struct PartnerWidgetView: View {
             Text(entry.status).font(.subheadline)
             Text(entry.detail).font(.caption).foregroundStyle(.secondary)
             if entry.quickPingEnabled {
-                Link(destination: URL(string: "143://widget/ping")!) {
+                Link(destination: URL(string: "onefourthree://widget/ping")!) {
                     Label("Quick Ping", systemImage: "heart.fill")
                         .font(.caption.bold())
                         .foregroundStyle(Color(red: 0.55, green: 0.24, blue: 0.35))
@@ -39,7 +39,7 @@ struct PartnerWidgetView: View {
             }
         }
         .containerBackground(Color(red: 1.0, green: 0.96, blue: 0.95), for: .widget)
-        .widgetURL(URL(string: "143://home"))
+        .widgetURL(URL(string: "onefourthree://home"))
     }
 }
 

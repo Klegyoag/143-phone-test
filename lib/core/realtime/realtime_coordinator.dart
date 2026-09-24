@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../api/api_client.dart';
 import '../sync/sync_coordinator.dart';
@@ -9,7 +10,8 @@ import 'realtime_event.dart';
 
 class RealtimeCoordinator extends ChangeNotifier {
   RealtimeCoordinator(this._api, this._sync)
-      : _client = RealtimeClient(apiBaseUrl: _api.baseUrl, secureStore: _api.secureStore);
+      : _client = RealtimeClient(
+            apiBaseUrl: _api.baseUrl, secureStore: _api.secureStore);
 
   final ApiClient _api;
   final SyncCoordinator _sync;
@@ -46,7 +48,8 @@ class RealtimeCoordinator extends ChangeNotifier {
     } catch (_) {}
     try {
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map) coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      if (couple is Map)
+        coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
     } catch (_) {
       coupleSpaceId = '';
     }
@@ -55,7 +58,8 @@ class RealtimeCoordinator extends ChangeNotifier {
         if (userId.isNotEmpty) 'private-user.$userId',
         if (coupleSpaceId.isNotEmpty) 'private-couple.$coupleSpaceId',
       ]);
-      if (coupleSpaceId.isNotEmpty) await setPresence('online', metadata: {'client': 'flutter'});
+      if (coupleSpaceId.isNotEmpty)
+        await setPresence('online', metadata: {'client': 'flutter'});
     } catch (_) {
       // API screens continue to work using HTTP/polling if realtime is unavailable.
     }
@@ -68,7 +72,8 @@ class RealtimeCoordinator extends ChangeNotifier {
     } catch (_) {}
     try {
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map) coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      if (couple is Map)
+        coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
     } catch (_) {
       coupleSpaceId = '';
     }
@@ -85,7 +90,8 @@ class RealtimeCoordinator extends ChangeNotifier {
       final me = (await _api.get('/me'))['data'];
       if (me is Map) userId = '${me['id'] ?? ''}';
       final couple = (await _api.get('/couple-spaces/current'))['data'];
-      if (couple is Map) coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
+      if (couple is Map)
+        coupleSpaceId = '${couple['id'] ?? couple['couple_space_id'] ?? ''}';
       await _client.updateChannels([
         if (userId.isNotEmpty) 'private-user.$userId',
         if (coupleSpaceId.isNotEmpty) 'private-couple.$coupleSpaceId',
@@ -93,9 +99,11 @@ class RealtimeCoordinator extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> setPresence(String status, {Map<String, dynamic>? metadata}) async {
+  Future<void> setPresence(String status,
+      {Map<String, dynamic>? metadata}) async {
     try {
-      await _api.put('/presence', data: {'status': status, 'metadata': metadata ?? {}});
+      await _api.put('/presence',
+          data: {'status': status, 'metadata': metadata ?? {}});
     } catch (_) {}
   }
 

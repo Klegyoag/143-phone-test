@@ -12,7 +12,7 @@ Place the real `google-services.json` at `android/app/google-services.json`, the
 
 ## Deep links
 
-The app currently supports the private `143://` scheme. HTTPS App Links are intentionally not declared until a real production domain and signing certificate are available. When a domain is ready, add the verified HTTPS intent filter and publish `/.well-known/assetlinks.json`.
+The app currently supports the private `onefourthree://` scheme. HTTPS App Links are intentionally not declared until a real production domain and signing certificate are available. When a domain is ready, add the verified HTTPS intent filter and publish `/.well-known/assetlinks.json`.
 
 ## Networking
 

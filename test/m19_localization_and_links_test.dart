@@ -5,7 +5,8 @@ import 'package:one_four_three/l10n/app_localizations.dart';
 
 void main() {
   test('unknown legacy links fall back safely to Home', () {
-    final target = DeepLinkTarget.fromUri(Uri.parse('143://legacy/old-link'));
+    final target =
+        DeepLinkTarget.fromUri(Uri.parse('onefourthree://legacy/old-link'));
     expect(target.location, '/app?tab=0');
     expect(target.tabIndex, 0);
   });

@@ -1,6 +1,6 @@
 # iOS host / WidgetKit setup
 
-The source uses the X10 Think application group `group.com.x10think.onefourthree` and the private `143://` URL scheme. A real HTTPS Universal Link domain is intentionally not fabricated in this package.
+The source uses the X10 Think application group `group.com.x10think.onefourthree` and the private `onefourthree://` URL scheme. A real HTTPS Universal Link domain is intentionally not fabricated in this package.
 
 Before App Store release on a Mac:
 

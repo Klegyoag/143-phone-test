@@ -3,12 +3,256 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class ScheduledLoveScreen extends ConsumerStatefulWidget{const ScheduledLoveScreen({super.key});@override ConsumerState<ScheduledLoveScreen> createState()=>_S();}
-class _S extends ConsumerState<ScheduledLoveScreen>{bool loading=true;List<Map<String,dynamic>> messages=[],surprises=[];@override void initState(){super.initState();_load();}
-Future<void>_load()async{setState(()=>loading=true);final r=ref.read(relationshipToolsRepositoryProvider);try{final x=await Future.wait([r.scheduledMessages(),r.surprises()]);messages=x[0];surprises=x[1];}finally{if(mounted)setState(()=>loading=false);}}
-Future<DateTime?>_when()async{final d=await showDatePicker(context:context,firstDate:DateTime.now(),lastDate:DateTime.now().add(const Duration(days:1095)),initialDate:DateTime.now().add(const Duration(days:1)));if(d==null)return null;final t=await showTimePicker(context:context,initialTime:TimeOfDay.now());return t==null?null:DateTime(d.year,d.month,d.day,t.hour,t.minute);}
-Future<void>_message()async{final text=TextEditingController();String trigger='date_time';final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setD)=>AlertDialog(title:const Text('Schedule love'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:text,maxLines:4,decoration:const InputDecoration(labelText:'Message')),const SizedBox(height:12),DropdownButtonFormField(value:trigger,items:const [DropdownMenuItem(value:'date_time',child:Text('Specific date & time')),DropdownMenuItem(value:'birthday',child:Text('Birthday')),DropdownMenuItem(value:'anniversary',child:Text('Anniversary')),DropdownMenuItem(value:'countdown',child:Text('Countdown trigger'))],onChanged:(v)=>setD(()=>trigger=v!),decoration:const InputDecoration(labelText:'Deliver on'))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Next'))])));if(ok!=true||text.text.trim().isEmpty)return;final w=await _when();if(w==null)return;await ref.read(relationshipToolsRepositoryProvider).createScheduledMessage({'body':text.text.trim(),'message':text.text.trim(),'type':trigger,'scheduled_at':w.toIso8601String()});_load();}
-Future<void>_surprise()async{final title=TextEditingController(),content=TextEditingController();String type='message';final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setD)=>AlertDialog(title:const Text('Create a secret surprise'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[DropdownButtonFormField(value:type,items:const [DropdownMenuItem(value:'message',child:Text('Love message')),DropdownMenuItem(value:'photo',child:Text('Secret photo')),DropdownMenuItem(value:'video',child:Text('Secret video')),DropdownMenuItem(value:'time_capsule',child:Text('Time Capsule')),DropdownMenuItem(value:'date_plan',child:Text('Secret date plan')),DropdownMenuItem(value:'gift_clue',child:Text('Gift clue'))],onChanged:(v)=>setD(()=>type=v!),decoration:const InputDecoration(labelText:'Surprise type')),const SizedBox(height:10),TextField(controller:title,decoration:const InputDecoration(labelText:'Title')),const SizedBox(height:10),TextField(controller:content,maxLines:4,decoration:const InputDecoration(labelText:'Secret content / clue'))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Choose unlock time'))])));if(ok!=true)return;final w=await _when();if(w==null)return;await ref.read(relationshipToolsRepositoryProvider).createSurprise({'type':type,'title':title.text.trim(),'body':content.text.trim(),'content':content.text.trim(),'scheduled_at':w.toIso8601String(),'unlock_at':w.toIso8601String(),'status':'scheduled'});_load();}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Scheduled Love')),floatingActionButton:FloatingActionButton(onPressed:()=>showModalBottomSheet(context:context,builder:(x)=>SafeArea(child:Wrap(children:[ListTile(leading:const Icon(Icons.schedule_send,color:AppColors.rose),title:const Text('Schedule a love message'),onTap:(){Navigator.pop(x);_message();}),ListTile(leading:const Icon(Icons.lock_heart,color:AppColors.rose),title:const Text('Create a secret surprise'),onTap:(){Navigator.pop(x);_surprise();})]))),child:const Icon(Icons.add)),body:loading?const Center(child:CircularProgressIndicator()):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.fromLTRB(20,8,20,120),children:[Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:AppColors.blush,borderRadius:BorderRadius.circular(28)),child:const Column(children:[Icon(Icons.schedule_send_rounded,color:AppColors.rose,size:38),Text('Write now. Let love arrive later.',style:TextStyle(fontWeight:FontWeight.w900,fontSize:19)),Text('Birthday, anniversary, a countdown — or simply the perfect moment.',textAlign:TextAlign.center,style:TextStyle(color:AppColors.muted))])),const SizedBox(height:18),const Text('Scheduled messages',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16)),if(messages.isEmpty)const Padding(padding:EdgeInsets.all(18),child:Text('No messages waiting yet.'))else ...messages.map((m)=>_tile(m,false)),const SizedBox(height:18),const Text('Secret surprises',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16)),if(surprises.isEmpty)const Padding(padding:EdgeInsets.all(18),child:Text('No locked surprises yet ♡'))else ...surprises.map((m)=>_tile(m,true))])));
-Widget _tile(Map<String,dynamic> m,bool surprise){final d=m['data'] is Map?(m['data'] as Map):const{};final status='${m['status']??'scheduled'}';return Card(child:ListTile(leading:CircleAvatar(backgroundColor:AppColors.blush,child:Icon(surprise?Icons.lock_heart:Icons.favorite,color:AppColors.rose)),title:Text('${m['title']??m['body']??d['message']??'For you ♡'}',maxLines:1,overflow:TextOverflow.ellipsis),subtitle:Text('${m['scheduled_at']??d['unlock_at']??''}\n$status'),isThreeLine:true,trailing:status=='revealed'?const Icon(Icons.lock_open):const Icon(Icons.lock_clock)));}
+class ScheduledLoveScreen extends ConsumerStatefulWidget {
+  const ScheduledLoveScreen({super.key});
+  @override
+  ConsumerState<ScheduledLoveScreen> createState() => _S();
+}
+
+class _S extends ConsumerState<ScheduledLoveScreen> {
+  bool loading = true;
+  List<Map<String, dynamic>> messages = [], surprises = [];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => loading = true);
+    final r = ref.read(relationshipToolsRepositoryProvider);
+    try {
+      final x = await Future.wait([r.scheduledMessages(), r.surprises()]);
+      messages = x[0];
+      surprises = x[1];
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<DateTime?> _when() async {
+    final d = await showDatePicker(
+        context: context,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 1095)),
+        initialDate: DateTime.now().add(const Duration(days: 1)));
+    if (d == null) return null;
+    final t =
+        await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    return t == null
+        ? null
+        : DateTime(d.year, d.month, d.day, t.hour, t.minute);
+  }
+
+  Future<void> _message() async {
+    final text = TextEditingController();
+    String trigger = 'date_time';
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setD) => AlertDialog(
+                    title: const Text('Schedule love'),
+                    content: Column(mainAxisSize: MainAxisSize.min, children: [
+                      TextField(
+                          controller: text,
+                          maxLines: 4,
+                          decoration:
+                              const InputDecoration(labelText: 'Message')),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField(
+                          value: trigger,
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'date_time',
+                                child: Text('Specific date & time')),
+                            DropdownMenuItem(
+                                value: 'birthday', child: Text('Birthday')),
+                            DropdownMenuItem(
+                                value: 'anniversary',
+                                child: Text('Anniversary')),
+                            DropdownMenuItem(
+                                value: 'countdown',
+                                child: Text('Countdown trigger'))
+                          ],
+                          onChanged: (v) => setD(() => trigger = v!),
+                          decoration:
+                              const InputDecoration(labelText: 'Deliver on'))
+                    ]),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Next'))
+                    ])));
+    if (ok != true || text.text.trim().isEmpty) return;
+    final w = await _when();
+    if (w == null) return;
+    await ref.read(relationshipToolsRepositoryProvider).createScheduledMessage({
+      'body': text.text.trim(),
+      'message': text.text.trim(),
+      'type': trigger,
+      'scheduled_at': w.toIso8601String()
+    });
+    _load();
+  }
+
+  Future<void> _surprise() async {
+    final title = TextEditingController(), content = TextEditingController();
+    String type = 'message';
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setD) => AlertDialog(
+                    title: const Text('Create a secret surprise'),
+                    content: SingleChildScrollView(
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                      DropdownButtonFormField(
+                          value: type,
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'message', child: Text('Love message')),
+                            DropdownMenuItem(
+                                value: 'photo', child: Text('Secret photo')),
+                            DropdownMenuItem(
+                                value: 'video', child: Text('Secret video')),
+                            DropdownMenuItem(
+                                value: 'time_capsule',
+                                child: Text('Time Capsule')),
+                            DropdownMenuItem(
+                                value: 'date_plan',
+                                child: Text('Secret date plan')),
+                            DropdownMenuItem(
+                                value: 'gift_clue', child: Text('Gift clue'))
+                          ],
+                          onChanged: (v) => setD(() => type = v!),
+                          decoration: const InputDecoration(
+                              labelText: 'Surprise type')),
+                      const SizedBox(height: 10),
+                      TextField(
+                          controller: title,
+                          decoration:
+                              const InputDecoration(labelText: 'Title')),
+                      const SizedBox(height: 10),
+                      TextField(
+                          controller: content,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                              labelText: 'Secret content / clue'))
+                    ])),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Choose unlock time'))
+                    ])));
+    if (ok != true) return;
+    final w = await _when();
+    if (w == null) return;
+    await ref.read(relationshipToolsRepositoryProvider).createSurprise({
+      'type': type,
+      'title': title.text.trim(),
+      'body': content.text.trim(),
+      'content': content.text.trim(),
+      'scheduled_at': w.toIso8601String(),
+      'unlock_at': w.toIso8601String(),
+      'status': 'scheduled'
+    });
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext c) => Scaffold(
+      appBar: AppBar(title: const Text('Scheduled Love')),
+      floatingActionButton: FloatingActionButton(
+          onPressed: () => showModalBottomSheet(
+              context: context,
+              builder: (x) => SafeArea(
+                      child: Wrap(children: [
+                    ListTile(
+                        leading: const Icon(Icons.schedule_send,
+                            color: AppColors.rose),
+                        title: const Text('Schedule a love message'),
+                        onTap: () {
+                          Navigator.pop(x);
+                          _message();
+                        }),
+                    ListTile(
+                        leading: const Icon(Icons.lock_outline,
+                            color: AppColors.rose),
+                        title: const Text('Create a secret surprise'),
+                        onTap: () {
+                          Navigator.pop(x);
+                          _surprise();
+                        })
+                  ]))),
+          child: const Icon(Icons.add)),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                  children: [
+                    Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                            color: AppColors.blush,
+                            borderRadius: BorderRadius.circular(28)),
+                        child: const Column(children: [
+                          Icon(Icons.schedule_send_rounded,
+                              color: AppColors.rose, size: 38),
+                          Text('Write now. Let love arrive later.',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 19)),
+                          Text(
+                              'Birthday, anniversary, a countdown — or simply the perfect moment.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.muted))
+                        ])),
+                    const SizedBox(height: 18),
+                    const Text('Scheduled messages',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900, fontSize: 16)),
+                    if (messages.isEmpty)
+                      const Padding(
+                          padding: EdgeInsets.all(18),
+                          child: Text('No messages waiting yet.'))
+                    else
+                      ...messages.map((m) => _tile(m, false)),
+                    const SizedBox(height: 18),
+                    const Text('Secret surprises',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900, fontSize: 16)),
+                    if (surprises.isEmpty)
+                      const Padding(
+                          padding: EdgeInsets.all(18),
+                          child: Text('No locked surprises yet ♡'))
+                    else
+                      ...surprises.map((m) => _tile(m, true))
+                  ])));
+  Widget _tile(Map<String, dynamic> m, bool surprise) {
+    final d = m['data'] is Map ? (m['data'] as Map) : const {};
+    final status = '${m['status'] ?? 'scheduled'}';
+    return Card(
+        child: ListTile(
+            leading: CircleAvatar(
+                backgroundColor: AppColors.blush,
+                child: Icon(surprise ? Icons.lock_outline : Icons.favorite,
+                    color: AppColors.rose)),
+            title: Text(
+                '${m['title'] ?? m['body'] ?? d['message'] ?? 'For you ♡'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            subtitle:
+                Text('${m['scheduled_at'] ?? d['unlock_at'] ?? ''}\n$status'),
+            isThreeLine: true,
+            trailing: status == 'revealed'
+                ? const Icon(Icons.lock_open)
+                : const Icon(Icons.lock_clock)));
+  }
 }

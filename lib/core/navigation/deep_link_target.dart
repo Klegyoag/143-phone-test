@@ -35,7 +35,7 @@ class DeepLinkTarget {
     if ((host.contains('memory') || path.contains('memory') || type.contains('memory') || type.contains('capsule')) && memoryId != null && memoryId.isNotEmpty) {
       return DeepLinkTarget(location: '/memory/${Uri.encodeComponent(memoryId)}', tabIndex: 1);
     }
-    if (path.contains('chat') || type.contains('chat') || type.contains('message')) {
+    if (host.contains('chat') || path.contains('chat') || type.contains('chat') || type.contains('message')) {
       return const DeepLinkTarget(location: '/app?tab=3', tabIndex: 3);
     }
     if (host.contains('memory') || path.contains('memory') || type.contains('memory') || type.contains('capsule')) {

@@ -26,6 +26,7 @@ jobs:
       - name: Set up Flutter stable
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.0'
           channel: stable
           cache: true
 
@@ -44,7 +45,7 @@ jobs:
             cp "$TMP/android/gradlew" android/gradlew
             cp "$TMP/android/gradlew.bat" android/gradlew.bat
             mkdir -p android/gradle/wrapper
-            cp "$TMP"/android/gradle/wrapper/* android/gradle/wrapper/
+            cp "$TMP/android/gradle/wrapper/gradle-wrapper.jar" android/gradle/wrapper/gradle-wrapper.jar
           fi
           chmod +x android/gradlew
 
@@ -76,5 +77,5 @@ jobs:
             143_M31_PHONE_TEST_DEBUG.apk
             143_M31_PHONE_TEST_DEBUG.apk.sha256
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 

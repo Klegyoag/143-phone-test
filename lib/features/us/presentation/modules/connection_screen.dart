@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/advanced_repository.dart';
 
 class ConnectionScreen extends ConsumerStatefulWidget {
   const ConnectionScreen({super.key});
@@ -27,8 +28,13 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
 
   Future<void> _loadPrivacy() async {
     try {
-      final permissions = await ref.read(advancedRepositoryProvider).privacyPermissions();
-      if (mounted) setState(() { moodShared = permissions['mood_shared'] != false; loadingPrivacy = false; });
+      final permissions =
+          await ref.read(advancedRepositoryProvider).privacyPermissions();
+      if (mounted)
+        setState(() {
+          moodShared = permissions['mood_shared'] != false;
+          loadingPrivacy = false;
+        });
     } catch (_) {
       if (mounted) setState(() => loadingPrivacy = false);
     }
@@ -42,13 +48,16 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => moodShared = before);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
       }
     }
   }
 
   Future<void> _sendNeedYou() async {
-    await ref.read(relationshipToolsRepositoryProvider).sendNeedYou(message: 'I need you right now ♡');
+    await ref
+        .read(relationshipToolsRepositoryProvider)
+        .sendNeedYou(message: 'I need you right now ♡');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.t('needYouSent'))),
@@ -57,7 +66,9 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
   }
 
   Future<void> _shareMood() async {
-    await ref.read(relationshipToolsRepositoryProvider).sendMood(mood: mood, visibility: moodShared ? 'partner' : 'private');
+    await ref
+        .read(relationshipToolsRepositoryProvider)
+        .sendMood(mood: mood, visibility: moodShared ? 'partner' : 'private');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.t('moodShared'))),
@@ -77,16 +88,17 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
     if (ref.read(appPreferencesProvider).hapticsEnabled) {
       HapticFeedback.selectionClick();
     }
-    ref.read(relationshipToolsRepositoryProvider).sendNeedYou(message: 'Touch ♡');
+    ref
+        .read(relationshipToolsRepositoryProvider)
+        .sendNeedYou(message: 'Touch ♡');
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final prefs = ref.watch(appPreferencesProvider);
-    final duration = prefs.reduceMotion
-        ? Duration.zero
-        : const Duration(milliseconds: 180);
+    final duration =
+        prefs.reduceMotion ? Duration.zero : const Duration(milliseconds: 180);
 
     return Scaffold(
       appBar: AppBar(title: Text(l.t('moodNeedYouTitle'))),
@@ -152,9 +164,12 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
           const SizedBox(height: 10),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.visibility_outlined, color: AppColors.rose),
+            secondary:
+                const Icon(Icons.visibility_outlined, color: AppColors.rose),
             title: const Text('Share mood with partner'),
-            subtitle: Text(moodShared ? 'Your current mood can be shared with your partner.' : 'New mood updates stay private to you.'),
+            subtitle: Text(moodShared
+                ? 'Your current mood can be shared with your partner.'
+                : 'New mood updates stay private to you.'),
             value: moodShared,
             onChanged: loadingPrivacy ? null : _setMoodPrivacy,
           ),
@@ -197,8 +212,8 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                         label: Text(l.t('messageAction')),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => ScaffoldMessenger.of(context)
-                            .showSnackBar(
+                        onPressed: () =>
+                            ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(l.t('callFromChatHint'))),
                         ),
                         icon: const Icon(Icons.call_outlined),

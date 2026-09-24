@@ -19,7 +19,7 @@ class PartnerStatusWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_title, prefs.getString("title", "143 · Our little world"))
             views.setTextViewText(R.id.widget_status, prefs.getString("partner_status", "Open 143 to refresh"))
             views.setTextViewText(R.id.widget_detail, prefs.getString("detail", "Private by default ♡"))
-            val intent = Intent(context, MainActivity::class.java).apply { action = Intent.ACTION_VIEW; data = android.net.Uri.parse("143://home") }
+            val intent = Intent(context, MainActivity::class.java).apply { action = Intent.ACTION_VIEW; data = android.net.Uri.parse("onefourthree://home") }
             val pi = PendingIntent.getActivity(context, 143, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             views.setOnClickPendingIntent(R.id.widget_root, pi)
 
@@ -27,7 +27,7 @@ class PartnerStatusWidget : AppWidgetProvider() {
             // It opens a confirmation surface in Flutter so the user explicitly initiates the haptic/notification interaction.
             val pingIntent = Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
-                data = android.net.Uri.parse("143://widget/ping")
+                data = android.net.Uri.parse("onefourthree://widget/ping")
             }
             val pingPi = PendingIntent.getActivity(context, 144, pingIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val quickPingEnabled = prefs.getBoolean("quick_ping_enabled", true)
