@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,23 +30,21 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
     final prefs = await SharedPreferences.getInstance();
     // The current backend handoff defines GET /bootstrap as the public contract
     // snapshot. Treat it as a best-effort preflight only; offline safe startup
-    // must still be possible when this request cannot be reached.
-    try {
-      final backend = await ref.read(apiClientProvider).get('/bootstrap');
-      final data = backend['data'];
-      if (data is Map) {
-        await ref.read(localCacheProvider).putJson('backend_bootstrap_snapshot', Map<String, dynamic>.from(data));
-      }
-    } catch (_) {
-      // Continue into token/cached-safe routing below.
-    }
+    // must still be possible when this request cannot be reached. Cache it in
+    // the background so a slow cold server never holds the first usable page.
+    unawaited(_cacheBackendSnapshot());
     final onboardingDone = prefs.getBool('onboarding_complete') ?? false;
     if (!onboardingDone) return _go('/onboarding');
 
     final api = ref.read(apiClientProvider);
-    final access = await api.secureStore.accessToken();
-    final refresh = await api.secureStore.refreshToken();
-    if ((access == null || access.isEmpty) && (refresh == null || refresh.isEmpty)) {
+    final tokens = await Future.wait([
+      api.secureStore.accessToken(),
+      api.secureStore.refreshToken(),
+    ]);
+    final access = tokens[0];
+    final refresh = tokens[1];
+    if ((access == null || access.isEmpty) &&
+        (refresh == null || refresh.isEmpty)) {
       return _go('/welcome');
     }
 
@@ -53,14 +53,20 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
       await api.get('/me');
 
       _status('checkingRecovery');
-      final recovery = await ref.read(authRepositoryProvider).recoveryStatus();
+      final startupChecks = await Future.wait<dynamic>([
+        ref.read(authRepositoryProvider).recoveryStatus(),
+        ref.read(legalRepositoryProvider).currentState(),
+        _currentCoupleOrNull(),
+      ]);
+      final recovery = startupChecks[0] as Map<String, dynamic>;
       final recoveryData = recovery['data'];
       final recoveryConfirmed = recoveryData is Map &&
-          (recoveryData['confirmed'] == true || recoveryData['recovery_confirmed'] == true);
+          (recoveryData['confirmed'] == true ||
+              recoveryData['recovery_confirmed'] == true);
       if (!recoveryConfirmed) return _go('/recovery-confirm');
 
       _status('checkingLegal');
-      final legal = await ref.read(legalRepositoryProvider).currentState();
+      final legal = startupChecks[1];
       if (legal.acceptanceRequired) return _go('/legal');
 
       final pendingInvite = prefs.getString('pending_invite_token');
@@ -69,15 +75,8 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
       }
 
       _status('findingCouple');
-      try {
-        final couple = await ref.read(coupleRepositoryProvider).current();
-        if (couple == null || couple.isEmpty) return _go('/couple-setup');
-      } on ApiException catch (e) {
-        if (e.statusCode == 404 || e.code == 'couple_space_not_found' || e.code == 'couple_space_required') {
-          return _go('/couple-setup');
-        }
-        rethrow;
-      }
+      final couple = startupChecks[2] as Map<String, dynamic>?;
+      if (couple == null || couple.isEmpty) return _go('/couple-setup');
 
       await ref.read(localCacheProvider).putJson('last_safe_route', '/app');
       return _go('/app');
@@ -90,16 +89,51 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
         return _go('/account-unavailable');
       }
       if (e.statusCode == 428) {
-        if (e.code == 'recovery_confirmation_required') return _go('/recovery-confirm');
-        if (e.code == 'legal_acceptance_required') return _go('/legal');
+        if (e.code == 'recovery_confirmation_required') {
+          return _go('/recovery-confirm');
+        }
+        if (e.code == 'legal_acceptance_required') {
+          return _go('/legal');
+        }
       }
-      final cached = await ref.read(localCacheProvider).getJson<String>('last_safe_route', maxAge: const Duration(days: 7));
-      if (cached == '/app' && (access?.isNotEmpty == true || refresh?.isNotEmpty == true)) {
+      final cached = await ref
+          .read(localCacheProvider)
+          .getJson<String>('last_safe_route', maxAge: const Duration(days: 7));
+      if (cached == '/app' &&
+          (access?.isNotEmpty == true || refresh?.isNotEmpty == true)) {
         return _go('/offline-startup');
       }
       _status('startupError');
     } catch (_) {
       _status('startupError');
+    }
+  }
+
+  Future<void> _cacheBackendSnapshot() async {
+    try {
+      final backend = await ref.read(apiClientProvider).get('/bootstrap');
+      final data = backend['data'];
+      if (data is Map) {
+        await ref.read(localCacheProvider).putJson(
+              'backend_bootstrap_snapshot',
+              Map<String, dynamic>.from(data),
+            );
+      }
+    } catch (_) {
+      // Startup never depends on this best-effort cache refresh.
+    }
+  }
+
+  Future<Map<String, dynamic>?> _currentCoupleOrNull() async {
+    try {
+      return await ref.read(coupleRepositoryProvider).current();
+    } on ApiException catch (e) {
+      if (e.statusCode == 404 ||
+          e.code == 'couple_space_not_found' ||
+          e.code == 'couple_space_required') {
+        return null;
+      }
+      rethrow;
     }
   }
 
@@ -124,21 +158,34 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
                     tween: Tween(begin: .86, end: 1),
                     duration: const Duration(milliseconds: 700),
                     curve: Curves.easeOutBack,
-                    builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+                    builder: (_, scale, child) =>
+                        Transform.scale(scale: scale, child: child),
                     child: Container(
                       width: 116,
                       height: 116,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.blush),
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle, color: AppColors.blush),
                       alignment: Alignment.center,
-                      child: const Text('143', style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: AppColors.rose)),
+                      child: const Text('143',
+                          style: TextStyle(
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.rose)),
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Text(context.l10n.t(messageKey), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+                  Text(context.l10n.t(messageKey),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 20),
-                  const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                  const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2.5)),
                   const SizedBox(height: 20),
-                  TextButton(onPressed: _bootstrap, child: Text(context.l10n.t('retryStartup'))),
+                  TextButton(
+                      onPressed: _bootstrap,
+                      child: Text(context.l10n.t('retryStartup'))),
                 ],
               ),
             ),
@@ -153,7 +200,8 @@ class AccountUnavailableScreen extends StatelessWidget {
   Widget build(BuildContext context) => const _StartupStateScreen(
         icon: Icons.person_off_outlined,
         title: 'Account unavailable',
-        body: 'This account cannot be opened right now. Sign in again or contact support if the problem continues.',
+        body:
+            'This account cannot be opened right now. Sign in again or contact support if the problem continues.',
         action: 'Back to sign in',
         route: '/login',
       );
@@ -169,14 +217,22 @@ class OfflineStartupScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.cloud_off_rounded, size: 58, color: AppColors.rose),
+                const Icon(Icons.cloud_off_rounded,
+                    size: 58, color: AppColors.rose),
                 const SizedBox(height: 18),
-                Text('You’re offline', style: Theme.of(context).textTheme.headlineMedium),
+                Text('You’re offline',
+                    style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 10),
-                const Text('143 can open previously cached, safe content. Sending, editing and sensitive actions stay unavailable until the server can verify your session.', textAlign: TextAlign.center),
+                const Text(
+                    '143 can open previously cached, safe content. Sending, editing and sensitive actions stay unavailable until the server can verify your session.',
+                    textAlign: TextAlign.center),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: () => context.go('/app?offline=1'), child: const Text('Open cached home')),
-                TextButton(onPressed: () => context.go('/bootstrap'), child: const Text('Try connection again')),
+                FilledButton(
+                    onPressed: () => context.go('/app?offline=1'),
+                    child: const Text('Open cached home')),
+                TextButton(
+                    onPressed: () => context.go('/bootstrap'),
+                    child: const Text('Try connection again')),
               ],
             ),
           ),
@@ -190,14 +246,20 @@ class CoupleSpaceUnavailableScreen extends StatelessWidget {
   Widget build(BuildContext context) => const _StartupStateScreen(
         icon: Icons.favorite_border_rounded,
         title: 'Couple space unavailable',
-        body: 'Your private couple space is not available yet. Create one or join your partner with an invite.',
+        body:
+            'Your private couple space is not available yet. Create one or join your partner with an invite.',
         action: 'Set up our space',
         route: '/couple-setup',
       );
 }
 
 class _StartupStateScreen extends StatelessWidget {
-  const _StartupStateScreen({required this.icon, required this.title, required this.body, required this.action, required this.route});
+  const _StartupStateScreen(
+      {required this.icon,
+      required this.title,
+      required this.body,
+      required this.action,
+      required this.route});
   final IconData icon;
   final String title, body, action, route;
   @override
@@ -205,14 +267,18 @@ class _StartupStateScreen extends StatelessWidget {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(icon, size: 58, color: AppColors.rose),
               const SizedBox(height: 18),
-              Text(title, style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+              Text(title,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center),
               const SizedBox(height: 10),
               Text(body, textAlign: TextAlign.center),
               const SizedBox(height: 24),
-              FilledButton(onPressed: () => context.go(route), child: Text(action)),
+              FilledButton(
+                  onPressed: () => context.go(route), child: Text(action)),
             ]),
           ),
         ),
