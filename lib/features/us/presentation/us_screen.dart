@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
@@ -74,7 +74,7 @@ class UsScreen extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.blush, AppColors.peach]), borderRadius: BorderRadius.circular(28)),
           child: Column(children: [
-            const Semantics(
+            Semantics(
               label: 'Two partner profiles connected by a heart',
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircleAvatar(radius: 27, child: Icon(Icons.person)), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.favorite_rounded, color: AppColors.rose)), CircleAvatar(radius: 27, child: Icon(Icons.person_outline))]),
             ),
@@ -118,3 +118,4 @@ class _UsItem {
   final String label;
   final VoidCallback onTap;
 }
+

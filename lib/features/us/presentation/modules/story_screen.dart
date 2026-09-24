@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -90,7 +90,7 @@ class _StoryScreenState extends ConsumerState<StoryScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 40),
         children: story.isEmpty
-            ? [const Padding(padding: EdgeInsets.only(top: 100), child: Center(child: Text('Your story starts here ♡')))]
+            ? [const Padding(padding: EdgeInsets.only(top: 100), child: Center(child: Text('Your story starts here â™¡')))]
             : story.asMap().entries.map((entry) {
                 final i = entry.key, x = entry.value;
                 return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -413,7 +413,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                       else
                         const Icon(Icons.collections_outlined, size: 40, color: AppColors.rose),
                       const SizedBox(width: 14),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${photos.length} memories', style: Theme.of(c).textTheme.titleLarge), Text('${album['status'] ?? 'shared'} • private couple album', style: const TextStyle(color: AppColors.muted))])),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${photos.length} memories', style: Theme.of(c).textTheme.titleLarge), Text('${album['status'] ?? 'shared'} â€¢ private couple album', style: const TextStyle(color: AppColors.muted))])),
                     ]),
                   ),
                   if (working) const Padding(padding: EdgeInsets.only(top: 10), child: LinearProgressIndicator()),
@@ -445,9 +445,9 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                             child: Stack(fit: StackFit.expand, children: [
                               if (url != null && url.isNotEmpty) Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _photoFallback()) else _photoFallback(),
                               Positioned(top: 6, right: 6, child: Row(children: [
-                                if (_favorite(p)) const CircleAvatar(radius: 15, backgroundColor: Colors.white90, child: Icon(Icons.favorite, size: 17, color: AppColors.rose)),
+                                if (_favorite(p)) const CircleAvatar(radius: 15, backgroundColor: Color(0xE6FFFFFF), child: Icon(Icons.favorite, size: 17, color: AppColors.rose)),
                                 PopupMenuButton<String>(
-                                  icon: const CircleAvatar(radius: 15, backgroundColor: Colors.white90, child: Icon(Icons.more_horiz, size: 17)),
+                                  icon: const CircleAvatar(radius: 15, backgroundColor: Color(0xE6FFFFFF), child: Icon(Icons.more_horiz, size: 17)),
                                   onSelected: (v) { if (v == 'cover') _setCover(p); if (v == 'edit') _editPhoto(p); if (v == 'delete') _deletePhoto(p); },
                                   itemBuilder: (_) => [
                                     PopupMenuItem(value: 'cover', child: Row(children: [Icon(coverMediaId == id ? Icons.photo_album_rounded : Icons.photo_album_outlined), const SizedBox(width: 10), Text(coverMediaId == id ? 'Current cover' : 'Set as album cover')])),
@@ -508,3 +508,4 @@ class _AlbumSlideshowScreenState extends State<AlbumSlideshowScreen> {
         ),
       );
 }
+

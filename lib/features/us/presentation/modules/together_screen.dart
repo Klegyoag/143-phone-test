@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +51,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
             final person = '${event.payload['display_name'] ?? event.payload['username'] ?? 'Your person'}';
             final joined = event.name == RealtimeEvents.togetherMemberJoined;
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(joined ? '$person joined the room ♡' : '$person left the room')));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(joined ? '$person joined the room â™¡' : '$person left the room')));
             }
           }
           _load(silent: true);
@@ -161,7 +161,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
     final roomId = '${room['id'] ?? ''}';
     final duration = youtube?.metadata.duration.inSeconds.toDouble() ?? double.tryParse('${_playback['duration'] ?? state['duration_seconds'] ?? state['duration'] ?? 0}') ?? 0;
     final localPosition = youtube?.value.position.inMilliseconds.toDouble() != null ? (youtube!.value.position.inMilliseconds / 1000.0) : _serverPosition;
-    final sliderMax = duration > 0 ? duration : 1;
+    final sliderMax = duration > 0 ? duration : 1.0;
     final members = room['members'] is List ? (room['members'] as List).whereType<Map>().toList() : <Map>[];
 
     return Scaffold(
@@ -188,7 +188,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                       const SizedBox(height: 8),
                       Text(room.isEmpty ? context.l10n.t('startTogether') : context.l10n.t('youreTogether'), style: Theme.of(context).textTheme.headlineSmall),
                       const SizedBox(height: 4),
-                      Text(room.isEmpty ? 'Watch or listen in sync, even from far away.' : 'Live shared state • ${_provider.isEmpty ? 'media' : _provider}', textAlign: TextAlign.center),
+                      Text(room.isEmpty ? 'Watch or listen in sync, even from far away.' : 'Live shared state â€¢ ${_provider.isEmpty ? 'media' : _provider}', textAlign: TextAlign.center),
                       if (members.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: members.map((m) => Chip(avatar: const Icon(Icons.circle, size: 10, color: Colors.green), label: Text('${m['display_name'] ?? m['username'] ?? 'Partner'}'))).toList()),
@@ -211,7 +211,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                     ] else if (_provider == 'spotify')
                       _spotifyProviderCard()
                     else if (_mediaSource.isNotEmpty)
-                      Card(child: ListTile(leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.rose), title: Text('${state['title'] ?? _currentQueueItem?['title'] ?? 'Shared media'}'), subtitle: Text('Provider playback for “$_provider” is isolated behind an integration boundary. Shared queue/state still remains synchronized.'))),
+                      Card(child: ListTile(leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.rose), title: Text('${state['title'] ?? _currentQueueItem?['title'] ?? 'Shared media'}'), subtitle: Text('Provider playback for â€œ$_providerâ€ is isolated behind an integration boundary. Shared queue/state still remains synchronized.'))),
                     _nowPlayingCard(localPosition, duration, sliderMax),
                     const SizedBox(height: 14),
                     _queueComposer(),
@@ -236,7 +236,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
                             child: ListTile(
                               leading: Icon(Icons.drag_handle_rounded, color: selected ? AppColors.rose : AppColors.muted),
                               title: Text('${item['title'] ?? item['media_id'] ?? item['url'] ?? 'Shared media'}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text('${item['provider'] ?? item['type'] ?? 'media'}${selected ? ' · Now playing' : ''}'),
+                              subtitle: Text('${item['provider'] ?? item['type'] ?? 'media'}${selected ? ' Â· Now playing' : ''}'),
                               onTap: () => _selectQueueItem(item),
                               trailing: IconButton(tooltip: 'Remove', icon: const Icon(Icons.close_rounded), onPressed: () => _removeQueue(id)),
                             ),
@@ -300,7 +300,7 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
               Expanded(child: Text('${state['title'] ?? _currentQueueItem?['title'] ?? state['media_title'] ?? (_mediaSource.isEmpty ? 'Choose from your queue' : _mediaSource)}', style: Theme.of(context).textTheme.titleLarge, maxLines: 2, overflow: TextOverflow.ellipsis)),
               IconButton(tooltip: _isPlaying ? 'Pause together' : 'Play together', onPressed: savingState || _mediaSource.isEmpty ? null : () => _setPlayback(!_isPlaying, position), icon: Icon(_isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, color: AppColors.rose, size: 38)),
             ]),
-            Slider(value: position.clamp(0, sliderMax), max: sliderMax, onChanged: duration > 0 ? (_) {} : null, onChangeEnd: duration > 0 ? (v) => _seek(v) : null),
+            Slider(value: position.clamp(0.0, sliderMax).toDouble(), max: sliderMax, onChanged: duration > 0 ? (_) {} : null, onChangeEnd: duration > 0 ? (v) => _seek(v) : null),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(_clock(position)), Text(duration > 0 ? _clock(duration) : 'Waiting for duration')]),
             const SizedBox(height: 10),
             Row(children: [
@@ -453,3 +453,4 @@ class _TogetherScreenState extends ConsumerState<TogetherScreen> {
     return '$min:${sec.toString().padLeft(2, '0')}';
   }
 }
+
