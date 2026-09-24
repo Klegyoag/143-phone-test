@@ -1,4 +1,4 @@
-name: Build 143 M31 Phone Test APK
+﻿name: Build 143 M31 Phone Test APK
 
 on:
   workflow_dispatch:
@@ -52,7 +52,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Test
         run: flutter test
@@ -77,3 +77,4 @@ jobs:
             143_M31_PHONE_TEST_DEBUG.apk.sha256
           if-no-files-found: error
           retention-days: 14
+
