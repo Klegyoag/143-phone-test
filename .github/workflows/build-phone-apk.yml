@@ -23,6 +23,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Free runner disk space
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          sudo rm -rf "$ANDROID_SDK_ROOT/emulator" "$ANDROID_SDK_ROOT/system-images"
+          if [[ -d "$ANDROID_SDK_ROOT/ndk" ]]; then
+            find "$ANDROID_SDK_ROOT/ndk" -mindepth 1 -maxdepth 1 ! -name '28.2.13676358' -exec sudo rm -rf {} +
+          fi
+          docker system prune --all --force || true
+          df -h /
+
       - name: Set up Flutter stable
         uses: subosito/flutter-action@v2
         with:
