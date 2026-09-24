@@ -63,6 +63,50 @@ class _LegalScreenState extends ConsumerState<LegalScreen> {
     }
   }
 
+  void showDocument(LegalDocumentInfo document) {
+    final privacy = document.type.toLowerCase().contains('privacy');
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .82,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(privacy ? Icons.shield_outlined : Icons.description_outlined,
+                  color: AppColors.rose),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(
+                      privacy ? 'Privacy Policy' : 'Terms and Conditions',
+                      style: Theme.of(context).textTheme.headlineSmall)),
+              IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded)),
+            ]),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  document.content.trim().isEmpty
+                      ? 'This document is temporarily unavailable. Please try again.'
+                      : document.content,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(height: 1.55),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading)
@@ -94,7 +138,7 @@ class _LegalScreenState extends ConsumerState<LegalScreen> {
                           style: Theme.of(context).textTheme.headlineMedium),
                       const SizedBox(height: 10),
                       Text(
-                          '143 checks the current Terms and Privacy versions, so already-compliant users are not asked again.',
+                          'Please review and accept the current Terms and Privacy Policy.',
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge
@@ -112,9 +156,23 @@ class _LegalScreenState extends ConsumerState<LegalScreen> {
                                     ? null
                                     : (v) => setState(
                                         () => accepted[d.id] = v ?? false),
-                                title: Text(d.title.isEmpty ? d.type : d.title),
-                                subtitle: Text(
-                                    'Version ${d.version.isEmpty ? 'current' : d.version}${already ? ' • already accepted' : ''}'),
+                                title: InkWell(
+                                  onTap: () => showDocument(d),
+                                  child: Text(
+                                    d.type.toLowerCase().contains('privacy')
+                                        ? 'Privacy Policy'
+                                        : 'Terms and Conditions',
+                                    style: const TextStyle(
+                                      color: AppColors.rose,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: AppColors.rose,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                subtitle: Text(already
+                                    ? 'Already accepted'
+                                    : 'Tap the title to read before agreeing'),
                                 secondary: Icon(
                                     d.type.toLowerCase().contains('privacy')
                                         ? Icons.shield_outlined

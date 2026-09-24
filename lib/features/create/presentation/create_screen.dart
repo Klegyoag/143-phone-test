@@ -17,44 +17,80 @@ class CreateScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text('Create'), backgroundColor: Colors.transparent),
-      body: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 1.05,
+      appBar: AppBar(
+          title: const Text('Create'), backgroundColor: Colors.transparent),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: dark
+                ? const [AppColors.darkBackground, Color(0xFF17101E)]
+                : const [AppColors.ivory, AppColors.paper],
+          ),
         ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MemoryCreateScreen(initialType: item.$3),
+        child: GridView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 1.05,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MemoryCreateScreen(initialType: item.$3),
+                ),
               ),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: index.isEven ? AppColors.blush : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.divider),
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: dark
+                      ? (index.isEven
+                          ? AppColors.darkBlush
+                          : AppColors.darkSurface)
+                      : (index.isEven ? AppColors.blush : Colors.white),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: dark ? AppColors.darkBorder : AppColors.divider,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: dark ? .16 : .04),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.rose.withValues(alpha: dark ? .18 : .11),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Icon(item.$1, color: AppColors.rose, size: 28),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(item.$2,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ],
+                ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(item.$1, color: AppColors.rose, size: 34),
-                  const SizedBox(height: 12),
-                  Text(item.$2, style: const TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

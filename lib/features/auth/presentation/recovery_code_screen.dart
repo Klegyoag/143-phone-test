@@ -78,7 +78,9 @@ class _RecoveryCodeScreenState extends State<RecoveryCodeScreen> {
           GradientActionButton(
             label: 'Continue safely',
             icon: Icons.arrow_forward_rounded,
-            onPressed: saved ? () => context.go('/recovery-confirm') : null,
+            onPressed: saved
+                ? () => context.go('/recovery-confirm', extra: widget.code)
+                : null,
           ),
         ],
       ),

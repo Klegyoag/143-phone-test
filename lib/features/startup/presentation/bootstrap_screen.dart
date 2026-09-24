@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_links/app_links.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/navigation/deep_link_target.dart';
 import '../../../core/theme/app_colors.dart';
 
 class BootstrapScreen extends ConsumerStatefulWidget {
@@ -72,6 +74,10 @@ class _BootstrapScreenState extends ConsumerState<BootstrapScreen> {
       if (couple == null || couple.isEmpty) return _go('/couple-setup');
 
       await ref.read(localCacheProvider).putJson('last_safe_route', '/app');
+      final initialLink = await AppLinks().getInitialLink();
+      if (initialLink != null) {
+        return _go(DeepLinkTarget.fromUri(initialLink).location);
+      }
       return _go('/app');
     } on ApiException catch (e) {
       if (e.statusCode == 401) {

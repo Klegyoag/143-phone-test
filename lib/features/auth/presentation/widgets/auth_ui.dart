@@ -160,44 +160,13 @@ class Brand143 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: '143',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFF36F8C), Color(0xFFFFB29C)],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.rose.withValues(alpha: .24),
-                  blurRadius: 16,
-                  offset: const Offset(0, 7),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.favorite_rounded,
-                color: Colors.white, size: 21),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            '143',
-            style: GoogleFonts.playfairDisplay(
-              color: dark ? Colors.white : const Color(0xFF25152B),
-              fontSize: 27,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -.7,
-            ),
-          ),
-        ],
+      child: Image.asset(
+        'assets/images/143_logo_transparent.png',
+        width: 92,
+        height: 64,
+        fit: BoxFit.contain,
       ),
     );
   }
