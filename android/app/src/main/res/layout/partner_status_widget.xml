@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="#FFF4F2">
+    <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="143 · Our little world" android:textStyle="bold" android:textSize="16sp" android:textColor="#6B334A"/>
+    <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Partner status" android:textSize="14sp" android:textColor="#3C2830"/>
+    <TextView android:id="@+id/widget_detail" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Private by default ♡" android:textSize="12sp" android:textColor="#7D6A71"/>
+    <TextView
+        android:id="@+id/widget_ping"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="7dp"
+        android:background="#F7D7DF"
+        android:text="♡ Quick Ping"
+        android:textStyle="bold"
+        android:textSize="12sp"
+        android:textColor="#8B3E5A" />
+</LinearLayout>
