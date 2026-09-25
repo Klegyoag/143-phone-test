@@ -9,7 +9,8 @@ import '../../../../core/theme/app_colors.dart';
 class LinkedDevicesScreen extends ConsumerStatefulWidget {
   const LinkedDevicesScreen({super.key});
   @override
-  ConsumerState<LinkedDevicesScreen> createState() => _LinkedDevicesScreenState();
+  ConsumerState<LinkedDevicesScreen> createState() =>
+      _LinkedDevicesScreenState();
 }
 
 class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
@@ -18,45 +19,128 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
   Map<String, dynamic>? intent;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   Future<void> _load() async {
     setState(() => loading = true);
-    try { devices = await ref.read(advancedRepositoryProvider).linkedDevices(); }
-    finally { if (mounted) setState(() => loading = false); }
+    try {
+      devices = await ref.read(advancedRepositoryProvider).linkedDevices();
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   Future<void> _createIntent() async {
     setState(() => working = true);
     try {
       final id = ref.read(deviceIdentityServiceProvider);
-      intent = await ref.read(advancedRepositoryProvider).createLinkIntent({'device_name': id.defaultName});
+      intent = await ref
+          .read(advancedRepositoryProvider)
+          .createLinkIntent({'device_name': id.defaultName});
       if (mounted) setState(() {});
-    } finally { if (mounted) setState(() => working = false); }
+    } finally {
+      if (mounted) setState(() => working = false);
+    }
   }
 
   Future<void> _scanAndConfirm() async {
-    final payload = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const DeviceQrScannerScreen(title: 'Scan device-link QR')));
+    final payload = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                const DeviceQrScannerScreen(title: 'Scan device-link QR')));
     if (payload == null) return;
     final parsed = _parse(payload, 'device-link');
     if (parsed == null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This is not a valid 143 device-link QR.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('This is not a valid 143 device-link QR.')));
       return;
     }
     setState(() => working = true);
     try {
       final identity = ref.read(deviceIdentityServiceProvider);
-      await ref.read(advancedRepositoryProvider).confirmLinkIntent(parsed.$1, {
-        'link_token': parsed.$2,
-        'device_id': await identity.deviceId(),
-        'device_name': identity.defaultName,
-        'platform': identity.platform,
-      });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This device is now linked.')));
+      final repo = ref.read(advancedRepositoryProvider);
+      if (!parsed.$2.startsWith('143-LINK-')) {
+        final preview = await repo.previewQrSession(parsed.$1, parsed.$2);
+        if (!mounted) return;
+        final approved = await showModalBottomSheet<bool>(
+              context: context,
+              isScrollControlled: true,
+              showDragHandle: true,
+              builder: (sheetContext) => SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                                color: AppColors.blush,
+                                borderRadius: BorderRadius.circular(18)),
+                            child: const Icon(Icons.laptop_mac_rounded,
+                                color: AppColors.rose, size: 30)),
+                        const SizedBox(height: 20),
+                        Text('Link this browser?',
+                            style: Theme.of(sheetContext)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+        Text(
+                            '${preview['device_name'] ?? '143 Web'} • ${preview['browser'] ?? 'Web browser'}'),
+                        const SizedBox(height: 10),
+                        const Text(
+                            'Only approve if the code is visible on a screen you trust. You can revoke access in Linked devices.'),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(sheetContext, true),
+                                child: const Text('Approve this browser'))),
+                        SizedBox(
+                            width: double.infinity,
+                            child: TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(sheetContext, false),
+                                child: const Text('Cancel'))),
+                      ]),
+                ),
+              ),
+            ) ??
+            false;
+        if (!approved) return;
+        await repo.approveQrSession(parsed.$1, parsed.$2, identity.defaultName);
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content:
+                  Text('Browser approved. It will connect automatically.')));
+      } else {
+        await repo.confirmLinkIntent(parsed.$1, {
+          'link_token': parsed.$2,
+          'device_id': await identity.deviceId(),
+          'device_name': identity.defaultName,
+          'platform': identity.platform,
+        });
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('This device is now linked.')));
+      }
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    } finally { if (mounted) setState(() => working = false); }
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => working = false);
+    }
   }
 
   (String, String)? _parse(String raw, String segment) {
@@ -68,13 +152,30 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
       if (u.host == segment && parts.isNotEmpty) id = parts.first;
       if (parts.length >= 2 && parts.first == segment) id = parts[1];
       final token = u.queryParameters['token'];
-      if (id == null || id.isEmpty || token == null || token.isEmpty) return null;
+      if (id == null || id.isEmpty || token == null || token.isEmpty)
+        return null;
       return (id, token);
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _revoke(String id) async {
-    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('Revoke linked device?'), content: const Text('That device will lose its linked-device status. This does not silently delete your account data.'), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Revoke'))])) ?? false;
+    final yes = await showDialog<bool>(
+            context: context,
+            builder: (c) => AlertDialog(
+                    title: const Text('Revoke linked device?'),
+                    content: const Text(
+                        'That device will lose its linked-device status. This does not silently delete your account data.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(c, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(c, true),
+                          child: const Text('Revoke'))
+                    ])) ??
+        false;
     if (!yes) return;
     await ref.read(advancedRepositoryProvider).revokeLinkedDevice(id);
     await _load();
@@ -99,7 +200,8 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.phonelink_lock_rounded, color: AppColors.rose, size: 34),
+                        Icon(Icons.phonelink_lock_rounded,
+                            color: AppColors.rose, size: 34),
                         SizedBox(width: 14),
                         Expanded(
                           child: Text(
@@ -138,7 +240,8 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
                           children: [
                             const Text(
                               'Scan on the new device',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w900),
                             ),
                             const SizedBox(height: 12),
                             QrImageView(
@@ -157,7 +260,8 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
                     ),
                   ],
                   const SizedBox(height: 22),
-                  Text('Linked devices', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Linked devices',
+                      style: Theme.of(context).textTheme.titleLarge),
                   if (devices.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
@@ -169,7 +273,8 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
                   ...devices.map(
                     (d) => Card(
                       child: ListTile(
-                        leading: const Icon(Icons.devices_rounded, color: AppColors.rose),
+                        leading: const Icon(Icons.devices_rounded,
+                            color: AppColors.rose),
                         title: Text(
                           '${d['title'] ?? d['name'] ?? d['device_name'] ?? 'Linked device'}',
                         ),
@@ -194,7 +299,8 @@ class _LinkedDevicesScreenState extends ConsumerState<LinkedDevicesScreen> {
 class DeviceMigrationScreen extends ConsumerStatefulWidget {
   const DeviceMigrationScreen({super.key});
   @override
-  ConsumerState<DeviceMigrationScreen> createState() => _DeviceMigrationScreenState();
+  ConsumerState<DeviceMigrationScreen> createState() =>
+      _DeviceMigrationScreenState();
 }
 
 class _DeviceMigrationScreenState extends ConsumerState<DeviceMigrationScreen> {
@@ -205,23 +311,56 @@ class _DeviceMigrationScreenState extends ConsumerState<DeviceMigrationScreen> {
     setState(() => working = true);
     try {
       final device = ref.read(deviceIdentityServiceProvider);
-      prepared = await ref.read(advancedRepositoryProvider).prepareMigration({'from_device': {'device_id': await device.deviceId(), 'name': device.defaultName, 'platform': device.platform}});
+      prepared = await ref.read(advancedRepositoryProvider).prepareMigration({
+        'from_device': {
+          'device_id': await device.deviceId(),
+          'name': device.defaultName,
+          'platform': device.platform
+        }
+      });
       if (mounted) setState(() {});
-    } finally { if (mounted) setState(() => working = false); }
+    } finally {
+      if (mounted) setState(() => working = false);
+    }
   }
 
   Future<void> _scanConfirm() async {
-    final raw = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const DeviceQrScannerScreen(title: 'Scan migration QR')));
+    final raw = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                const DeviceQrScannerScreen(title: 'Scan migration QR')));
     if (raw == null) return;
     final parsed = _parseMigration(raw);
-    if (parsed == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid or incomplete migration QR.'))); return; }
+    if (parsed == null) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Invalid or incomplete migration QR.')));
+      return;
+    }
     setState(() => working = true);
     try {
       final d = ref.read(deviceIdentityServiceProvider);
-      await ref.read(advancedRepositoryProvider).confirmMigration({'migration_id': parsed.$1, 'transfer_token': parsed.$2, 'new_device': {'device_id': await d.deviceId(), 'name': d.defaultName, 'platform': d.platform}});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Migration handoff confirmed. Encrypted payload transfer still requires the reviewed encryption layer.')));
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
-    finally { if (mounted) setState(() => working = false); }
+      await ref.read(advancedRepositoryProvider).confirmMigration({
+        'migration_id': parsed.$1,
+        'transfer_token': parsed.$2,
+        'new_device': {
+          'device_id': await d.deviceId(),
+          'name': d.defaultName,
+          'platform': d.platform
+        }
+      });
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Migration handoff confirmed. Encrypted payload transfer still requires the reviewed encryption layer.')));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => working = false);
+    }
   }
 
   (String, String)? _parseMigration(String raw) {
@@ -229,31 +368,73 @@ class _DeviceMigrationScreenState extends ConsumerState<DeviceMigrationScreen> {
       final u = Uri.parse(raw);
       if (u.scheme != '143') return null;
       String? id;
-      if (u.host == 'migration' && u.pathSegments.isNotEmpty) id = u.pathSegments.first;
-      if (u.pathSegments.length >= 2 && u.pathSegments.first == 'migration') id = u.pathSegments[1];
+      if (u.host == 'migration' && u.pathSegments.isNotEmpty)
+        id = u.pathSegments.first;
+      if (u.pathSegments.length >= 2 && u.pathSegments.first == 'migration')
+        id = u.pathSegments[1];
       final token = u.queryParameters['token'];
       if (id == null || token == null) return null;
       return (id, token);
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Move to a New Device')),
-    body: ListView(padding: const EdgeInsets.all(20), children: [
-      Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.blush, AppColors.peach]), borderRadius: BorderRadius.circular(26)), child: const Column(children: [Icon(Icons.phonelink_ring_rounded, color: AppColors.rose, size: 42), SizedBox(height: 10), Text('Private device handoff', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)), SizedBox(height: 6), Text('The backend provides a short-lived migration token. Private content must only be transferred after a reviewed encrypted-transfer implementation is available.', textAlign: TextAlign.center)])),
-      const SizedBox(height: 18),
-      FilledButton.icon(onPressed: working ? null : _prepare, icon: const Icon(Icons.qr_code_2), label: const Text('Prepare on old device')),
-      const SizedBox(height: 8),
-      OutlinedButton.icon(onPressed: working ? null : _scanConfirm, icon: const Icon(Icons.qr_code_scanner), label: const Text('Scan on new device')),
-      if (prepared != null) ...[
-        const SizedBox(height: 18),
-        Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(children: [QrImageView(data: '${prepared!['qr_payload'] ?? ''}', size: 220, backgroundColor: Colors.white), const SizedBox(height: 10), Text('Expires: ${prepared!['expires_at'] ?? 'soon'}')]))),
-      ],
-      const SizedBox(height: 18),
-      const Card(child: ListTile(leading: Icon(Icons.security_rounded, color: AppColors.rose), title: Text('SECURITY REVIEW REQUIRED'), subtitle: Text('The QR/token coordination is real. End-to-end encrypted payload transfer and recovery-key cryptography are not claimed complete until a reviewed protocol/library is integrated and device-tested.'))),
-    ]),
-  );
+        appBar: AppBar(title: const Text('Move to a New Device')),
+        body: ListView(padding: const EdgeInsets.all(20), children: [
+          Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [AppColors.blush, AppColors.peach]),
+                  borderRadius: BorderRadius.circular(26)),
+              child: const Column(children: [
+                Icon(Icons.phonelink_ring_rounded,
+                    color: AppColors.rose, size: 42),
+                SizedBox(height: 10),
+                Text('Private device handoff',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+                SizedBox(height: 6),
+                Text(
+                    'The backend provides a short-lived migration token. Private content must only be transferred after a reviewed encrypted-transfer implementation is available.',
+                    textAlign: TextAlign.center)
+              ])),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+              onPressed: working ? null : _prepare,
+              icon: const Icon(Icons.qr_code_2),
+              label: const Text('Prepare on old device')),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+              onPressed: working ? null : _scanConfirm,
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scan on new device')),
+          if (prepared != null) ...[
+            const SizedBox(height: 18),
+            Card(
+                child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(children: [
+                      QrImageView(
+                          data: '${prepared!['qr_payload'] ?? ''}',
+                          size: 220,
+                          backgroundColor: Colors.white),
+                      const SizedBox(height: 10),
+                      Text('Expires: ${prepared!['expires_at'] ?? 'soon'}')
+                    ]))),
+          ],
+          const SizedBox(height: 18),
+          const Card(
+              child: ListTile(
+                  leading: Icon(Icons.security_rounded, color: AppColors.rose),
+                  title: Text('SECURITY REVIEW REQUIRED'),
+                  subtitle: Text(
+                      'The QR/token coordination is real. End-to-end encrypted payload transfer and recovery-key cryptography are not claimed complete until a reviewed protocol/library is integrated and device-tested.'))),
+        ]),
+      );
 }
 
 class DeviceQrScannerScreen extends StatefulWidget {
@@ -265,15 +446,135 @@ class DeviceQrScannerScreen extends StatefulWidget {
 
 class _DeviceQrScannerScreenState extends State<DeviceQrScannerScreen> {
   bool done = false;
+  final MobileScannerController controller = MobileScannerController();
+  bool torchOn = false;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.title)),
-    body: MobileScanner(onDetect: (capture) {
-      if (done) return;
-      final value = capture.barcodes.isEmpty ? null : capture.barcodes.first.rawValue;
-      if (value == null || value.isEmpty) return;
-      done = true;
-      Navigator.pop(context, value);
-    }),
-  );
+        backgroundColor: const Color(0xFF15111C),
+        body: Stack(children: [
+          Positioned.fill(
+              child: MobileScanner(
+                  controller: controller,
+                  onDetect: (capture) {
+                    if (done) return;
+                    final value = capture.barcodes.isEmpty
+                        ? null
+                        : capture.barcodes.first.rawValue;
+                    if (value == null || value.isEmpty) return;
+                    done = true;
+                    Navigator.pop(context, value);
+                  })),
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: CustomPaint(painter: _ScannerOverlayPainter()))),
+          SafeArea(
+              child: Column(children: [
+            Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                child: Row(children: [
+                  IconButton.filledTonal(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: 'Back'),
+                  const Spacer(),
+                  IconButton.filledTonal(
+                      onPressed: () async {
+                        await controller.toggleTorch();
+                        if (mounted) setState(() => torchOn = !torchOn);
+                      },
+                      icon: Icon(torchOn
+                          ? Icons.flash_on_rounded
+                          : Icons.flash_off_rounded),
+                      tooltip: 'Toggle flashlight'),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                      onPressed: controller.switchCamera,
+                      icon: const Icon(Icons.cameraswitch_rounded),
+                      tooltip: 'Switch camera'),
+                ])),
+            const Spacer(),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF211B2B).withValues(alpha: .96),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: const Color(0xFF574455))),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.qr_code_scanner_rounded,
+                        color: Color(0xFFFF7097), size: 30),
+                    const SizedBox(height: 12),
+                    Text(widget.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    const Text(
+                        'Keep the code inside the frame. We will ask before linking this device.',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: Color(0xFFD8CCD6), height: 1.45)),
+                  ]),
+                )),
+            const SizedBox(height: 20),
+          ])),
+        ]),
+      );
+}
+
+class _ScannerOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final side = (size.width - 72).clamp(230.0, 320.0);
+    final rect = Rect.fromCenter(
+        center: Offset(size.width / 2, size.height * .43),
+        width: side,
+        height: side);
+    final outer = Path()..addRect(Offset.zero & size);
+    final hole = Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(28)));
+    canvas.drawPath(Path.combine(PathOperation.difference, outer, hole),
+        Paint()..color = const Color(0xB515111C));
+    final border = Paint()
+      ..color = const Color(0xFFFF7C9D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    const length = 34.0;
+    const radius = 28.0;
+    final corners = Path()
+      ..moveTo(rect.left, rect.top + length)
+      ..lineTo(rect.left, rect.top + radius)
+      ..quadraticBezierTo(rect.left, rect.top, rect.left + radius, rect.top)
+      ..lineTo(rect.left + length, rect.top)
+      ..moveTo(rect.right - length, rect.top)
+      ..lineTo(rect.right - radius, rect.top)
+      ..quadraticBezierTo(rect.right, rect.top, rect.right, rect.top + radius)
+      ..lineTo(rect.right, rect.top + length)
+      ..moveTo(rect.left, rect.bottom - length)
+      ..lineTo(rect.left, rect.bottom - radius)
+      ..quadraticBezierTo(
+          rect.left, rect.bottom, rect.left + radius, rect.bottom)
+      ..lineTo(rect.left + length, rect.bottom)
+      ..moveTo(rect.right - length, rect.bottom)
+      ..lineTo(rect.right - radius, rect.bottom)
+      ..quadraticBezierTo(
+          rect.right, rect.bottom, rect.right, rect.bottom - radius)
+      ..lineTo(rect.right, rect.bottom - length);
+    canvas.drawPath(corners, border);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
