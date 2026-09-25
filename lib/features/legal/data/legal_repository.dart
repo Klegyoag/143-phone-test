@@ -1,4 +1,5 @@
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
 
 class LegalDocumentInfo {
   const LegalDocumentInfo({
@@ -39,7 +40,19 @@ class LegalRepository {
 
   Future<LegalState> currentState() async {
     final docsResponse = await _api.get('/legal/documents');
-    final consentsResponse = await _api.get('/consents');
+    Map<String, dynamic> consentsResponse = const {'data': <dynamic>[]};
+    try {
+      consentsResponse = await _api.get('/consents');
+    } on ApiException catch (error) {
+      // New accounts must be able to read Terms and Privacy before their
+      // one-time recovery code is confirmed. Treat the setup gate as no prior
+      // consent; all other failures should still surface to the UI.
+      if (error.statusCode != 403 &&
+          error.statusCode != 428 &&
+          error.code != 'recovery_confirmation_required') {
+        rethrow;
+      }
+    }
     final docsRaw = docsResponse['data'];
     final consentsRaw = consentsResponse['data'];
 
@@ -61,8 +74,9 @@ class LegalRepository {
             '${map['legal_document_id'] ?? (document is Map ? document['id'] : '')}';
         final acceptedAt = map['accepted_at'];
         final revokedAt = map['revoked_at'];
-        if (id.isNotEmpty && acceptedAt != null && revokedAt == null)
+        if (id.isNotEmpty && acceptedAt != null && revokedAt == null) {
           accepted.add(id);
+        }
       }
     }
     return LegalState(requiredDocuments: docs, acceptedDocumentIds: accepted);

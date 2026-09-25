@@ -24,6 +24,7 @@ class _RecoveryConfirmScreenState extends ConsumerState<RecoveryConfirmScreen> {
   List<LegalDocumentInfo> documents = const [];
   bool loading = false;
   bool loadingLegal = true;
+  String? legalError;
 
   @override
   void initState() {
@@ -46,6 +47,12 @@ class _RecoveryConfirmScreenState extends ConsumerState<RecoveryConfirmScreen> {
       documents.isNotEmpty && documents.every((d) => accepted[d.id] == true);
 
   Future<void> _loadLegal() async {
+    if (mounted) {
+      setState(() {
+        loadingLegal = true;
+        legalError = null;
+      });
+    }
     try {
       final legal = await ref.read(legalRepositoryProvider).currentState();
       if (!mounted) return;
@@ -59,10 +66,10 @@ class _RecoveryConfirmScreenState extends ConsumerState<RecoveryConfirmScreen> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => loadingLegal = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      setState(() {
+        loadingLegal = false;
+        legalError = e.message;
+      });
     }
   }
 
@@ -203,6 +210,27 @@ class _RecoveryConfirmScreenState extends ConsumerState<RecoveryConfirmScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: LinearProgressIndicator(minHeight: 3),
+            )
+          else if (legalError != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.rose.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_off_rounded, color: AppColors.rose),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Terms and Privacy could not load. Check your connection and try again.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  TextButton(onPressed: _loadLegal, child: const Text('Retry')),
+                ],
+              ),
             )
           else
             ...documents.map((document) {
