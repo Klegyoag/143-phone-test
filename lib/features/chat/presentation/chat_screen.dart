@@ -41,7 +41,10 @@ class _State extends ConsumerState<ChatScreen> {
   String conversationId = '', myUserId = '';
   List<ChatMessage> messages = [];
   final List<_PendingBubble> pending = [];
-  bool loading = true, sendingAttachment = false, loadingOlder = false;
+  bool loading = true,
+      sendingAttachment = false,
+      loadingOlder = false,
+      refreshing = false;
   String? loadError;
   String? nextCursor;
   Timer? timer;
@@ -109,7 +112,7 @@ class _State extends ConsumerState<ChatScreen> {
       unawaited(_loadPresence());
       await _refresh();
       timer = Timer.periodic(
-          const Duration(seconds: 25), (_) => _refresh(silent: true));
+          const Duration(seconds: 8), (_) => _refresh(silent: true));
     } catch (error) {
       if (mounted)
         setState(() {
@@ -131,7 +134,8 @@ class _State extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _refresh({bool silent = false}) async {
-    if (conversationId.isEmpty) return;
+    if (conversationId.isEmpty || refreshing) return;
+    refreshing = true;
     try {
       final page = await ref
           .read(chatRepositoryProvider)
@@ -157,6 +161,8 @@ class _State extends ConsumerState<ChatScreen> {
           loading = false;
           loadError = '$error';
         });
+    } finally {
+      refreshing = false;
     }
   }
 
@@ -336,9 +342,9 @@ class _State extends ConsumerState<ChatScreen> {
                       ? 'Realtime connected'
                       : (rt.enabled
                           ? 'Realtime reconnecting'
-                          : 'Realtime not configured'),
+                          : 'Checking for new messages automatically'),
                   child: Icon(
-                      rt.connected ? Icons.bolt_rounded : Icons.bolt_outlined,
+                      rt.connected ? Icons.bolt_rounded : Icons.sync_rounded,
                       color: rt.connected ? AppColors.rose : AppColors.muted));
             }),
             IconButton(
@@ -446,6 +452,21 @@ class _State extends ConsumerState<ChatScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.history_rounded),
                     label: const Text('Load older messages'))),
+          if (messages.isEmpty && pending.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 90),
+              child: Column(children: [
+                Icon(Icons.favorite_border_rounded,
+                    color: AppColors.rose, size: 42),
+                const SizedBox(height: 14),
+                Text('Your conversation starts here',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text('Messages will appear when you and your person connect.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.secondaryText(context))),
+              ]),
+            ),
           ...messages.map(_messageBubble),
           ...pending.map(_pendingBubble),
         ],
