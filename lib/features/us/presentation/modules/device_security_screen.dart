@@ -387,8 +387,7 @@ class _DeviceMigrationScreenState extends ConsumerState<DeviceMigrationScreen> {
           Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      colors: [AppColors.blush, AppColors.peach]),
+                  gradient: AppColors.heroGradient(context),
                   borderRadius: BorderRadius.circular(26)),
               child: const Column(children: [
                 Icon(Icons.phonelink_ring_rounded,

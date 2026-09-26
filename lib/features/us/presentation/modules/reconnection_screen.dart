@@ -84,12 +84,10 @@ class _CoolDownScreenState extends ConsumerState<CoolDownScreen> {
                     Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xfffff1f4), Color(0xfffff7ee)],
-                        ),
+                        gradient: AppColors.heroGradient(context),
                         borderRadius: BorderRadius.circular(28),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
                           Icon(Icons.spa_rounded,
                               color: AppColors.rose, size: 38),
@@ -102,7 +100,8 @@ class _CoolDownScreenState extends ConsumerState<CoolDownScreen> {
                           Text(
                             'Quiet Time softens non-urgent pings. It never blocks safety, account or security notices.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: AppColors.muted),
+                            style: TextStyle(
+                                color: AppColors.secondaryText(context)),
                           ),
                         ],
                       ),

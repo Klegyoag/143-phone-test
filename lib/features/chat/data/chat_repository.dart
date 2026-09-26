@@ -36,7 +36,12 @@ class ChatMessage {
         replyToId: j['reply_to_id']?.toString(),
         createdAt: DateTime.tryParse('${j['created_at'] ?? ''}'),
         editedAt: DateTime.tryParse('${j['edited_at'] ?? ''}'),
-        receipts: j['receipts'] is List ? (j['receipts'] as List).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList() : const [],
+        receipts: j['receipts'] is List
+            ? (j['receipts'] as List)
+                .whereType<Map>()
+                .map((e) => e.cast<String, dynamic>())
+                .toList()
+            : const [],
       );
 
   Map<String, dynamic> toJson() => {
@@ -75,8 +80,10 @@ class ChatRepository {
     return d is Map ? '${d['id'] ?? ''}' : '';
   }
 
-  Future<ChatPage> messagesPage(String conversationId, {String? cursor, int limit = 40}) async {
-    final d = _data(await _api.get('/conversations/$conversationId/messages', query: {
+  Future<ChatPage> messagesPage(String conversationId,
+      {String? cursor, int limit = 40}) async {
+    final d =
+        _data(await _api.get('/conversations/$conversationId/messages', query: {
       'limit': limit,
       if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
     }));
@@ -87,8 +94,12 @@ class ChatRepository {
       next = d['next_cursor']?.toString();
     }
     if (rows is! List) return ChatPage(messages: const [], nextCursor: next);
-    final list = rows.whereType<Map>().map((e) => ChatMessage.fromJson(e.cast<String, dynamic>())).toList();
-    list.sort((a, b) => (a.createdAt ?? DateTime(1970)).compareTo(b.createdAt ?? DateTime(1970)));
+    final list = rows
+        .whereType<Map>()
+        .map((e) => ChatMessage.fromJson(e.cast<String, dynamic>()))
+        .toList();
+    list.sort((a, b) => (a.createdAt ?? DateTime(1970))
+        .compareTo(b.createdAt ?? DateTime(1970)));
     return ChatPage(messages: list, nextCursor: next);
   }
 
@@ -99,18 +110,37 @@ class ChatRepository {
       await _cache.putJson(key, page.messages.map((e) => e.toJson()).toList());
       return page.messages;
     } catch (_) {
-      final cached = await _cache.getJson<dynamic>(key, maxAge: const Duration(days: 3));
+      final cached =
+          await _cache.getJson<dynamic>(key, maxAge: const Duration(days: 3));
       if (cached is List) {
-        final list = cached.whereType<Map>().map((e) => ChatMessage.fromJson(e.cast<String, dynamic>())).toList();
-        list.sort((a, b) => (a.createdAt ?? DateTime(1970)).compareTo(b.createdAt ?? DateTime(1970)));
+        final list = cached
+            .whereType<Map>()
+            .map((e) => ChatMessage.fromJson(e.cast<String, dynamic>()))
+            .toList();
+        list.sort((a, b) => (a.createdAt ?? DateTime(1970))
+            .compareTo(b.createdAt ?? DateTime(1970)));
         return list;
       }
       rethrow;
     }
   }
 
-  Future<void> cacheMessages(String conversationId, List<ChatMessage> messages) =>
-      _cache.putJson('chat_$conversationId', messages.map((e) => e.toJson()).toList());
+  Future<void> cacheMessages(
+          String conversationId, List<ChatMessage> messages) =>
+      _cache.putJson(
+          'chat_$conversationId', messages.map((e) => e.toJson()).toList());
+
+  Future<List<ChatMessage>> cachedMessages(String conversationId) async {
+    final cached = await _cache.getJson<dynamic>('chat_$conversationId',
+        maxAge: const Duration(days: 3));
+    if (cached is! List) return const [];
+    return cached
+        .whereType<Map>()
+        .map((row) => ChatMessage.fromJson(row.cast<String, dynamic>()))
+        .toList()
+      ..sort((a, b) => (a.createdAt ?? DateTime(1970))
+          .compareTo(b.createdAt ?? DateTime(1970)));
+  }
 
   Future<ChatMessage> send(
     String conversationId,
@@ -125,20 +155,28 @@ class ChatRepository {
       'payload': payload ?? {},
       if (replyToId != null) 'reply_to_id': replyToId,
     });
-    return ChatMessage.fromJson(((_data(j) as Map?) ?? {}).cast<String, dynamic>());
+    return ChatMessage.fromJson(
+        ((_data(j) as Map?) ?? {}).cast<String, dynamic>());
   }
 
-  Future<void> edit(String id, String body) => _api.patch('/messages/$id', data: {'body': body});
+  Future<void> edit(String id, String body) =>
+      _api.patch('/messages/$id', data: {'body': body});
   Future<void> delete(String id) => _api.delete('/messages/$id');
-  Future<void> react(String id, String reaction) => _api.post('/messages/$id/reactions', data: {'reaction': reaction});
-  Future<void> unreact(String id, String reaction) => _api.delete('/messages/$id/reactions/${Uri.encodeComponent(reaction)}');
-  Future<void> markRead(String conversationId) => _api.post('/conversations/$conversationId/read');
+  Future<void> react(String id, String reaction) =>
+      _api.post('/messages/$id/reactions', data: {'reaction': reaction});
+  Future<void> unreact(String id, String reaction) =>
+      _api.delete('/messages/$id/reactions/${Uri.encodeComponent(reaction)}');
+  Future<void> markRead(String conversationId) =>
+      _api.post('/conversations/$conversationId/read');
   Future<void> markMessageRead(String id) => _api.post('/messages/$id/read');
-  Future<void> typingStart(String conversationId) => _api.post('/conversations/$conversationId/typing/start');
-  Future<void> typingStop(String conversationId) => _api.post('/conversations/$conversationId/typing/stop');
+  Future<void> typingStart(String conversationId) =>
+      _api.post('/conversations/$conversationId/typing/start');
+  Future<void> typingStop(String conversationId) =>
+      _api.post('/conversations/$conversationId/typing/stop');
 
   Future<int> unreadCount(String conversationId) async {
-    final d = _data(await _api.get('/conversations/$conversationId/unread-count'));
+    final d =
+        _data(await _api.get('/conversations/$conversationId/unread-count'));
     return d is Map ? int.tryParse('${d['count'] ?? 0}') ?? 0 : 0;
   }
 }

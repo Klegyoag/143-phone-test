@@ -3,14 +3,218 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class InsightsScreen extends ConsumerStatefulWidget{const InsightsScreen({super.key});@override ConsumerState<InsightsScreen> createState()=>_InsightsScreenState();}
-class _InsightsScreenState extends ConsumerState<InsightsScreen>{bool loading=true;String period='overview';Map<String,dynamic> data={},streaks={},highlights={};bool sharing=false;
-@override void initState(){super.initState();_load();}
-Future<void>_load()async{setState(()=>loading=true);final a=ref.read(advancedRepositoryProvider),r=ref.read(relationshipToolsRepositoryProvider);try{data=switch(period){'weekly'=>await a.weeklyInsights(),'monthly'=>await a.monthlyInsights(),'annual'=>await a.annualInsights(),_=>await a.insightOverview()};streaks=await r.insightStreaks();highlights=await r.insightHighlights();}finally{if(mounted)setState(()=>loading=false);}}
-Future<void>_share()async{setState(()=>sharing=true);try{await ref.read(relationshipToolsRepositoryProvider).createInsightShareCard({'period':period,'privacy':'couple_safe','include':['messages','memories','pings','completed_goals','games_completed']});if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Recap card prepared with your sharing privacy settings.')));}finally{if(mounted)setState(()=>sharing=false);}}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Relationship Insights'),actions:[IconButton(onPressed:_privacy,icon:const Icon(Icons.privacy_tip_outlined))]),body:loading?const Center(child:CircularProgressIndicator()):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.fromLTRB(20,8,20,100),children:[Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[AppColors.blush,AppColors.peach]),borderRadius:BorderRadius.circular(28)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.insights_rounded,color:AppColors.rose,size:36),SizedBox(height:8),Text('Your shared activity, gently summarized',style:TextStyle(fontWeight:FontWeight.w900,fontSize:19)),Text('These are activity summaries — never a score, diagnosis, or judgment about your relationship.',style:TextStyle(color:AppColors.muted))])),const SizedBox(height:16),SegmentedButton<String>(segments:const [ButtonSegment(value:'overview',label:Text('Now')),ButtonSegment(value:'weekly',label:Text('Week')),ButtonSegment(value:'monthly',label:Text('Month')),ButtonSegment(value:'annual',label:Text('Wrapped'))],selected:{period},onSelectionChanged:(v){period=v.first;_load();}),const SizedBox(height:18),_metrics(),const SizedBox(height:18),if(streaks.isNotEmpty)_section('Streak moments',streaks,Icons.local_fire_department_outlined),if(highlights.isNotEmpty)_section('Highlights',highlights,Icons.auto_awesome_outlined),const SizedBox(height:8),OutlinedButton.icon(onPressed:sharing?null:_share,icon:const Icon(Icons.ios_share),label:Text(period=='annual'?'Create Annual Wrapped card':'Create shareable recap card'))])));
-Widget _metrics(){final defs=[('messages','Communication',Icons.chat_bubble_outline),('memories','Shared experiences',Icons.photo_library_outlined),('pings','Appreciation & connection',Icons.favorite_border),('completed_goals','Shared goals',Icons.flag_outlined),('games_completed','Play together',Icons.sports_esports_outlined)];return GridView.count(crossAxisCount:2,shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.25,children:defs.map((x)=>Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(22),border:Border.all(color:AppColors.divider)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(x.$3,color:AppColors.rose),const Spacer(),Text('${data[x.$1]??0}',style:const TextStyle(fontSize:24,fontWeight:FontWeight.w900)),Text(x.$2,style:const TextStyle(fontSize:12,color:AppColors.muted))]))).toList());}
-Widget _section(String title,Map<String,dynamic> m,IconData icon)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:16)),const SizedBox(height:8),...m.entries.where((e)=>!['period','generated_at'].contains(e.key)).map((e)=>Card(child:ListTile(leading:Icon(icon,color:AppColors.rose),title:Text(_pretty(e.key)),trailing:Text('${e.value}',style:const TextStyle(fontWeight:FontWeight.w800)))))]));
-Future<void>_privacy()async{bool share=true;final ok=await showDialog<bool>(context:context,builder:(x)=>StatefulBuilder(builder:(x,setD)=>AlertDialog(title:const Text('Recap sharing privacy'),content:SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Allow shareable recap cards'),subtitle:const Text('Only selected summary stats are included.'),value:share,onChanged:(v)=>setD(()=>share=v)),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Save'))])));if(ok==true)await ref.read(relationshipToolsRepositoryProvider).updateInsightPrivacy({'share_cards_enabled':share});}
-String _pretty(String s)=>s.replaceAll('_',' ').split(' ').map((e)=>e.isEmpty?e:'${e[0].toUpperCase()}${e.substring(1)}').join(' ');
+class InsightsScreen extends ConsumerStatefulWidget {
+  const InsightsScreen({super.key});
+  @override
+  ConsumerState<InsightsScreen> createState() => _InsightsScreenState();
+}
+
+class _InsightsScreenState extends ConsumerState<InsightsScreen> {
+  bool loading = true;
+  String period = 'overview';
+  Map<String, dynamic> data = {}, streaks = {}, highlights = {};
+  bool sharing = false;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => loading = true);
+    final a = ref.read(advancedRepositoryProvider),
+        r = ref.read(relationshipToolsRepositoryProvider);
+    try {
+      data = switch (period) {
+        'weekly' => await a.weeklyInsights(),
+        'monthly' => await a.monthlyInsights(),
+        'annual' => await a.annualInsights(),
+        _ => await a.insightOverview()
+      };
+      streaks = await r.insightStreaks();
+      highlights = await r.insightHighlights();
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _share() async {
+    setState(() => sharing = true);
+    try {
+      await ref
+          .read(relationshipToolsRepositoryProvider)
+          .createInsightShareCard({
+        'period': period,
+        'privacy': 'couple_safe',
+        'include': [
+          'messages',
+          'memories',
+          'pings',
+          'completed_goals',
+          'games_completed'
+        ]
+      });
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Recap card prepared with your sharing privacy settings.')));
+    } finally {
+      if (mounted) setState(() => sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext c) => Scaffold(
+      appBar: AppBar(title: const Text('Relationship Insights'), actions: [
+        IconButton(
+            onPressed: _privacy, icon: const Icon(Icons.privacy_tip_outlined))
+      ]),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  children: [
+                    Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                            gradient: AppColors.heroGradient(c),
+                            borderRadius: BorderRadius.circular(28)),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.insights_rounded,
+                                  color: AppColors.rose, size: 36),
+                              SizedBox(height: 8),
+                              Text('Your shared activity, gently summarized',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 19)),
+                              Text(
+                                  'These are activity summaries — never a score, diagnosis, or judgment about your relationship.',
+                                  style: TextStyle(
+                                      color: AppColors.secondaryText(c)))
+                            ])),
+                    const SizedBox(height: 16),
+                    SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'overview', label: Text('Now')),
+                          ButtonSegment(value: 'weekly', label: Text('Week')),
+                          ButtonSegment(value: 'monthly', label: Text('Month')),
+                          ButtonSegment(value: 'annual', label: Text('Wrapped'))
+                        ],
+                        selected: {
+                          period
+                        },
+                        onSelectionChanged: (v) {
+                          period = v.first;
+                          _load();
+                        }),
+                    const SizedBox(height: 18),
+                    _metrics(),
+                    const SizedBox(height: 18),
+                    if (streaks.isNotEmpty)
+                      _section('Streak moments', streaks,
+                          Icons.local_fire_department_outlined),
+                    if (highlights.isNotEmpty)
+                      _section('Highlights', highlights,
+                          Icons.auto_awesome_outlined),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                        onPressed: sharing ? null : _share,
+                        icon: const Icon(Icons.ios_share),
+                        label: Text(period == 'annual'
+                            ? 'Create Annual Wrapped card'
+                            : 'Create shareable recap card'))
+                  ])));
+  Widget _metrics() {
+    final defs = [
+      ('messages', 'Communication', Icons.chat_bubble_outline),
+      ('memories', 'Shared experiences', Icons.photo_library_outlined),
+      ('pings', 'Appreciation & connection', Icons.favorite_border),
+      ('completed_goals', 'Shared goals', Icons.flag_outlined),
+      ('games_completed', 'Play together', Icons.sports_esports_outlined)
+    ];
+    return GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1.25,
+        children: defs
+            .map((x) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: AppColors.cardSurface(context),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: AppColors.divider)),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(x.$3, color: AppColors.rose),
+                      const Spacer(),
+                      Text('${data[x.$1] ?? 0}',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.w900)),
+                      Text(x.$2,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.muted))
+                    ])))
+            .toList());
+  }
+
+  Widget _section(String title, Map<String, dynamic> m, IconData icon) =>
+      Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            const SizedBox(height: 8),
+            ...m.entries
+                .where((e) => !['period', 'generated_at'].contains(e.key))
+                .map((e) => Card(
+                    child: ListTile(
+                        leading: Icon(icon, color: AppColors.rose),
+                        title: Text(_pretty(e.key)),
+                        trailing: Text('${e.value}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w800)))))
+          ]));
+  Future<void> _privacy() async {
+    bool share = true;
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (x) => StatefulBuilder(
+            builder: (x, setD) => AlertDialog(
+                    title: const Text('Recap sharing privacy'),
+                    content: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Allow shareable recap cards'),
+                        subtitle: const Text(
+                            'Only selected summary stats are included.'),
+                        value: share,
+                        onChanged: (v) => setD(() => share = v)),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(x, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(x, true),
+                          child: const Text('Save'))
+                    ])));
+    if (ok == true)
+      await ref
+          .read(relationshipToolsRepositoryProvider)
+          .updateInsightPrivacy({'share_cards_enabled': share});
+  }
+
+  String _pretty(String s) => s
+      .replaceAll('_', ' ')
+      .split(' ')
+      .map((e) => e.isEmpty ? e : '${e[0].toUpperCase()}${e.substring(1)}')
+      .join(' ');
 }

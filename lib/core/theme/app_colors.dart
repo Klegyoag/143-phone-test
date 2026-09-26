@@ -24,4 +24,22 @@ abstract final class AppColors {
   static const darkBorder = Color(0xFF41354B);
   static const darkInk = Color(0xFFFFF7FA);
   static const darkMuted = Color(0xFFC8BDCD);
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static LinearGradient heroGradient(BuildContext context) => LinearGradient(
+        colors: isDark(context)
+            ? const [Color(0xFF332333), Color(0xFF242034)]
+            : const [blush, peach],
+      );
+
+  static Color softSurface(BuildContext context) =>
+      isDark(context) ? darkSurfaceHigh : blush;
+
+  static Color cardSurface(BuildContext context) =>
+      isDark(context) ? darkSurfaceHigh : paper;
+
+  static Color secondaryText(BuildContext context) =>
+      isDark(context) ? darkMuted : muted;
 }

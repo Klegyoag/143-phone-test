@@ -60,6 +60,8 @@ class AdvancedRepository {
       _map(_data(await _api.post('/calls/$id/end')));
   Future<List<Map<String, dynamic>>> iceServers() async =>
       _list(_data(await _api.get('/calls/ice-servers')));
+  Future<List<Map<String, dynamic>>> incomingCalls() async =>
+      _list(_data(await _api.get('/calls/incoming')));
   Future<void> publishCallOffer(String id, {required String sdp}) =>
       _api.post('/calls/$id/offer', data: {'sdp': sdp, 'type': 'offer'});
   Future<void> publishCallAnswer(String id, {required String sdp}) =>

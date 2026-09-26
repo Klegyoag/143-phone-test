@@ -76,8 +76,16 @@ class _CallSessionScreenState extends ConsumerState<CallSessionScreen> {
         ref.read(realtimeCoordinatorProvider).events.listen(_handleRealtime);
     if (!widget.incoming) {
       await _startLocalMedia();
-      await _ensurePeer();
-      await _ensureOffer();
+      if (_localStream != null) {
+        try {
+          await _ensurePeer();
+          await _ensureOffer();
+        } catch (error) {
+          if (mounted)
+            setState(() => mediaError =
+                'Could not connect the call. Please try again. ($error)');
+        }
+      }
     }
     // HTTP signaling keeps calls usable on serverless deployments where a
     // persistent WebSocket host is unavailable. Realtime events still win.
@@ -380,7 +388,8 @@ class _CallSessionScreenState extends ConsumerState<CallSessionScreen> {
                   style: const TextStyle(color: Colors.white70)),
               if (mediaStarting) ...[
                 const SizedBox(height: 12),
-                const LinearProgressIndicator()
+                const Text('Preparing your microphone and connection…',
+                    style: TextStyle(color: Colors.white70)),
               ],
               if (mediaError != null) ...[
                 const SizedBox(height: 12),

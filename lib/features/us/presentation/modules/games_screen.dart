@@ -80,8 +80,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                     Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [AppColors.blush, AppColors.peach]),
+                          gradient: AppColors.heroGradient(context),
                           borderRadius: BorderRadius.circular(28)),
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,9 +89,10 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800, fontSize: 20)),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                                 'Tiny games made for two — not for endless screen time.',
-                                style: TextStyle(color: AppColors.muted)),
+                                style: TextStyle(
+                                    color: AppColors.secondaryText(context))),
                             const SizedBox(height: 14),
                             Row(children: [
                               const Icon(Icons.auto_awesome_rounded,
@@ -132,7 +132,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                             child: Ink(
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.cardSurface(context),
                                   borderRadius: BorderRadius.circular(22),
                                   border: Border.all(color: AppColors.divider)),
                               child: Row(children: [

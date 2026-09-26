@@ -50,10 +50,9 @@ class _S extends ConsumerState<JourneysScreen> {
                       Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                  colors: [AppColors.blush, AppColors.peach]),
+                              gradient: AppColors.heroGradient(context),
                               borderRadius: BorderRadius.circular(26)),
-                          child: const Column(children: [
+                          child: Column(children: [
                             Icon(Icons.route_outlined,
                                 color: AppColors.rose, size: 38),
                             SizedBox(height: 8),
@@ -63,7 +62,8 @@ class _S extends ConsumerState<JourneysScreen> {
                             SizedBox(height: 5),
                             Text(
                                 'Supportive, non-diagnostic guided experiences.',
-                                style: TextStyle(color: AppColors.muted))
+                                style: TextStyle(
+                                    color: AppColors.secondaryText(context)))
                           ])),
                       const SizedBox(height: 16),
                       ...catalog.map((j) {

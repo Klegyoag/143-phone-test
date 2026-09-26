@@ -99,8 +99,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                  colors: [AppColors.blush, AppColors.peach]),
+                              gradient: AppColors.heroGradient(context),
                               borderRadius: BorderRadius.circular(26)),
                           child: Column(children: [
                             const Icon(Icons.cloud_outlined,
@@ -255,8 +254,7 @@ class _WidgetsScreenState extends ConsumerState<WidgetsScreen> {
                     Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                                colors: [AppColors.blush, AppColors.peach]),
+                            gradient: AppColors.heroGradient(context),
                             borderRadius: BorderRadius.circular(26)),
                         child: Column(children: [
                           const Icon(Icons.widgets_rounded,

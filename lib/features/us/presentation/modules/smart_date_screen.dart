@@ -3,9 +3,131 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class SmartDateScreen extends ConsumerStatefulWidget{const SmartDateScreen({super.key});@override ConsumerState<SmartDateScreen> createState()=>_SmartDateScreenState();}
-class _SmartDateScreenState extends ConsumerState<SmartDateScreen>{String budget='low',mood='cozy',place='either';double duration=120;bool loading=false;List<Map<String,dynamic>> ideas=[];
-Future<void>_generate()async{setState(()=>loading=true);try{final r=await ref.read(relationshipToolsRepositoryProvider).generateDate(budget:budget,mood:mood,place:place,durationMinutes:duration.round());final v=r['suggestions'];ideas=v is List?v.whereType<Map>().map((x)=>x.cast<String,dynamic>()).toList():[];}finally{if(mounted)setState(()=>loading=false);}}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Smart Date')),body:ListView(padding:const EdgeInsets.fromLTRB(20,8,20,100),children:[Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[AppColors.blush,AppColors.peach]),borderRadius:BorderRadius.circular(28)),child:const Column(children:[Icon(Icons.auto_awesome_rounded,color:AppColors.rose,size:38),Text('What kind of date feels right?',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900)),Text('A little guidance — not a complicated planner.',style:TextStyle(color:AppColors.muted))])),const SizedBox(height:18),const Text('Budget',style:TextStyle(fontWeight:FontWeight.w800)),Wrap(spacing:8,children:['low','medium','high'].map((x)=>ChoiceChip(label:Text(x),selected:budget==x,onSelected:(_)=>setState(()=>budget=x))).toList()),const SizedBox(height:14),const Text('Mood',style:TextStyle(fontWeight:FontWeight.w800)),Wrap(spacing:8,children:['cozy','playful','romantic','adventurous'].map((x)=>ChoiceChip(label:Text(x),selected:mood==x,onSelected:(_)=>setState(()=>mood=x))).toList()),const SizedBox(height:14),const Text('Where?',style:TextStyle(fontWeight:FontWeight.w800)),SegmentedButton<String>(segments:const [ButtonSegment(value:'home',label:Text('Home')),ButtonSegment(value:'outside',label:Text('Outside')),ButtonSegment(value:'either',label:Text('Either'))],selected:{place},onSelectionChanged:(v)=>setState(()=>place=v.first)),const SizedBox(height:14),Text('Duration • ${duration.round()} min',style:const TextStyle(fontWeight:FontWeight.w800)),Slider(value:duration,min:30,max:300,divisions:9,onChanged:(v)=>setState(()=>duration=v)),FilledButton.icon(onPressed:loading?null:_generate,icon:const Icon(Icons.favorite),label:Text(loading?'Finding something lovely…':'Generate date ideas')),const SizedBox(height:22),...ideas.map((x)=>_idea(x))]));
-Widget _idea(Map<String,dynamic>x)=>Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${x['title']??'Date idea'}',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17)),const SizedBox(height:6),Text('${x['place']??''} • ${x['duration_minutes']??''} min • ${x['budget']??''}',style:const TextStyle(color:AppColors.muted)),const SizedBox(height:12),Wrap(spacing:8,children:[OutlinedButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Open Calendar to save this date idea.'))),icon:const Icon(Icons.calendar_month),label:const Text('Save to Calendar')),OutlinedButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Date Planner uses the shared calendar contract.'))),icon:const Icon(Icons.favorite_border),label:const Text('Date Planner'))])])));
+class SmartDateScreen extends ConsumerStatefulWidget {
+  const SmartDateScreen({super.key});
+  @override
+  ConsumerState<SmartDateScreen> createState() => _SmartDateScreenState();
+}
+
+class _SmartDateScreenState extends ConsumerState<SmartDateScreen> {
+  String budget = 'low', mood = 'cozy', place = 'either';
+  double duration = 120;
+  bool loading = false;
+  List<Map<String, dynamic>> ideas = [];
+  Future<void> _generate() async {
+    setState(() => loading = true);
+    try {
+      final r = await ref
+          .read(relationshipToolsRepositoryProvider)
+          .generateDate(
+              budget: budget,
+              mood: mood,
+              place: place,
+              durationMinutes: duration.round());
+      final v = r['suggestions'];
+      ideas = v is List
+          ? v.whereType<Map>().map((x) => x.cast<String, dynamic>()).toList()
+          : [];
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext c) => Scaffold(
+      appBar: AppBar(title: const Text('Smart Date')),
+      body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+          children: [
+            Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                    gradient: AppColors.heroGradient(c),
+                    borderRadius: BorderRadius.circular(28)),
+                child: Column(children: [
+                  Icon(Icons.auto_awesome_rounded,
+                      color: AppColors.rose, size: 38),
+                  Text('What kind of date feels right?',
+                      style:
+                          TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                  Text('A little guidance — not a complicated planner.',
+                      style: TextStyle(color: AppColors.secondaryText(c)))
+                ])),
+            const SizedBox(height: 18),
+            const Text('Budget', style: TextStyle(fontWeight: FontWeight.w800)),
+            Wrap(
+                spacing: 8,
+                children: ['low', 'medium', 'high']
+                    .map((x) => ChoiceChip(
+                        label: Text(x),
+                        selected: budget == x,
+                        onSelected: (_) => setState(() => budget = x)))
+                    .toList()),
+            const SizedBox(height: 14),
+            const Text('Mood', style: TextStyle(fontWeight: FontWeight.w800)),
+            Wrap(
+                spacing: 8,
+                children: ['cozy', 'playful', 'romantic', 'adventurous']
+                    .map((x) => ChoiceChip(
+                        label: Text(x),
+                        selected: mood == x,
+                        onSelected: (_) => setState(() => mood = x)))
+                    .toList()),
+            const SizedBox(height: 14),
+            const Text('Where?', style: TextStyle(fontWeight: FontWeight.w800)),
+            SegmentedButton<String>(segments: const [
+              ButtonSegment(value: 'home', label: Text('Home')),
+              ButtonSegment(value: 'outside', label: Text('Outside')),
+              ButtonSegment(value: 'either', label: Text('Either'))
+            ], selected: {
+              place
+            }, onSelectionChanged: (v) => setState(() => place = v.first)),
+            const SizedBox(height: 14),
+            Text('Duration • ${duration.round()} min',
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+            Slider(
+                value: duration,
+                min: 30,
+                max: 300,
+                divisions: 9,
+                onChanged: (v) => setState(() => duration = v)),
+            FilledButton.icon(
+                onPressed: loading ? null : _generate,
+                icon: const Icon(Icons.favorite),
+                label: Text(loading
+                    ? 'Finding something lovely…'
+                    : 'Generate date ideas')),
+            const SizedBox(height: 22),
+            ...ideas.map((x) => _idea(x))
+          ]));
+  Widget _idea(Map<String, dynamic> x) => Card(
+      child: Padding(
+          padding: const EdgeInsets.all(18),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${x['title'] ?? 'Date idea'}',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            const SizedBox(height: 6),
+            Text(
+                '${x['place'] ?? ''} • ${x['duration_minutes'] ?? ''} min • ${x['budget'] ?? ''}',
+                style: const TextStyle(color: AppColors.muted)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, children: [
+              OutlinedButton.icon(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content:
+                              Text('Open Calendar to save this date idea.'))),
+                  icon: const Icon(Icons.calendar_month),
+                  label: const Text('Save to Calendar')),
+              OutlinedButton.icon(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Date Planner uses the shared calendar contract.'))),
+                  icon: const Icon(Icons.favorite_border),
+                  label: const Text('Date Planner'))
+            ])
+          ])));
 }

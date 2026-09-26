@@ -108,9 +108,7 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.blush, AppColors.peach],
-              ),
+              gradient: AppColors.heroGradient(context),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Column(
@@ -130,7 +128,7 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                 Text(
                   l.t('tinySignalBody'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.muted),
+                  style: TextStyle(color: AppColors.secondaryText(context)),
                 ),
               ],
             ),
